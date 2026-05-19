@@ -1,0 +1,35 @@
+@import "tailwindcss";
+/* Fonts — Manrope (UI) + Inter (inputs/labels) */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+ @theme {
+  --breakpoint-3xl: 2560px;
+  --breakpoint-4xl: 3840px;
+  --breakpoint-8xl: 7680px;
+}
+:root {
+  /* Brand — logo, all links, forgot password */
+  --brand: #994700;
+  --brand-light: #fdba74;
+ 
+  /* Text */
+  --text-primary: #1f1f1f;   /* heading + body paragraph   */
+  --text-label:   #6b7280;   /* both uppercase field labels */
+  --text-muted:   #584235;   /* "New admin?" line           */
+  --text-footer:  #9ca3af;   /* copyright line              */
+  --text-divider: #d6b9a4;   /* "Authorized Access Only"    */
+ 
+  /* Inputs — border + placeholder repeat on both fields */
+  --border:      #e6cdb8;
+  --placeholder: #c7b8ad;
+ 
+  /* Surface */
+  --page-bg: #f5f5f5;
+ 
+  /* Divider — the two rule lines */
+  --divider: #f1e4da;
+ 
+  /* Fonts */
+  --font-manrope: 'Manrope', sans-serif;  /* headings, logo, buttons, body */
+  --font-inter:   'Inter', sans-serif;    /* labels, input text, small UI  */
+}
+ 
