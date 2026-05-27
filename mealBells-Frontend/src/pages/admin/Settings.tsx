@@ -1,34 +1,57 @@
-import { useState } from "react";
-import alignJustifyIcon from "../../assets/alignJustifyIcon.png";
-import utensilsIcon from "../../assets/utensilsIcon.png";
-import bellIcon from "../../assets/bellIconsettings.png";
-import shieldIcon from "../../assets/shieldIcon.png";
-import clockIcon from "../../assets/clock.png";
-import timerIcon from "../../assets/timerIcon.png";
+import { useState, useEffect }          from "react";
+import { useDispatch, useSelector }     from "react-redux";
+import type { RootState, AppDispatch }  from "../../app/store";
+import { fetchOrganization, updateOrganization } from "../../slices/organizationSlice";
+import toast from "react-hot-toast";
+
+import alignJustifyIcon  from "../../assets/alignJustifyIcon.png";
+import utensilsIcon      from "../../assets/utensilsIcon.png";
+import bellIcon          from "../../assets/bellIconsettings.png";
+import shieldIcon        from "../../assets/shieldIcon.png";
+import clockIcon         from "../../assets/clock.png";
+import timerIcon         from "../../assets/timerIcon.png";
 import messageSquareIcon from "../../assets/messageSquareIcon.png";
-import lockReset from "../../assets/lockReset.png";
-import refreshIcon from "../../assets/refreshIcon.png";
+import lockReset         from "../../assets/lockReset.png";
+import refreshIcon       from "../../assets/refreshIcon.png";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface OrgFields {
+  companyName:   string;
+  contactEmail:  string;
+  officeAddress: string;
+}
+
+const ORG_DEFAULT: OrgFields = {
+  companyName:   "",
+  contactEmail:  "",
+  officeAddress: "",
+};
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
   <button
     onClick={onToggle}
-    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 ${enabled ? "bg-orange-500" : "bg-gray-300"}`}
+    className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 ${
+      enabled ? "bg-orange-500" : "bg-gray-300"
+    }`}
   >
-    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+      enabled ? "translate-x-6" : "translate-x-1"
+    }`} />
   </button>
 );
 
 const CircleCheckbox = ({ checked, onToggle }: { checked: boolean; onToggle: () => void }) => (
   <button
     onClick={onToggle}
-    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${checked ? "border-orange-500 bg-orange-500" : "border-gray-300 bg-white"}`}
+    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+      checked ? "border-orange-500 bg-orange-500" : "border-gray-300 bg-white"
+    }`}
   >
     {checked && <span className="block h-2 w-1 -translate-y-px rotate-45 border-b-2 border-r-2 border-white" />}
   </button>
 );
 
-// ─── Section Header ───────────────────────────────────────────────────────────
 function SectionHeader({ icon, iconBg, title, description }: {
   icon: string; iconBg: string; title: string; description: string;
 }) {
@@ -47,11 +70,51 @@ function SectionHeader({ icon, iconBg, title, description }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Settings() {
+  const dispatch = useDispatch<AppDispatch>();
+
+  // ── Redux state
+  const { data: orgData, loading, saving, error } = useSelector(
+    (state: RootState) => state.organization
+  );
+
+  // ── Local form state
+  const [form, setForm] = useState<OrgFields>(ORG_DEFAULT);
+
+  // ── Local UI state
   const [allowDishRequests, setAllowDishRequests] = useState(true);
-  const [twoFactor, setTwoFactor]                 = useState(false);
-  const [emailAlerts, setEmailAlerts]             = useState(true);
-  const [mobilePush, setMobilePush]               = useState(true);
-  const [dailyVendor, setDailyVendor]             = useState(false);
+  const [twoFactor,         setTwoFactor]         = useState(false);
+  const [emailAlerts,       setEmailAlerts]       = useState(true);
+  const [mobilePush,        setMobilePush]        = useState(true);
+  const [dailyVendor,       setDailyVendor]       = useState(false);
+
+  // ── Fetch org on mount
+  useEffect(() => {
+    dispatch(fetchOrganization());
+  }, [dispatch]);
+
+  // ── Sync Redux data → local form
+  useEffect(() => {
+    if (orgData) {
+      setForm({
+        companyName:   orgData.companyName,
+        contactEmail:  orgData.contactEmail,
+        officeAddress: orgData.officeAddress,
+      });
+    }
+  }, [orgData]);
+
+  // ── Save
+  const handleSave = async () => {
+    const result = await dispatch(updateOrganization(form));
+    if (updateOrganization.fulfilled.match(result)) {
+      toast.success("Settings saved!");
+    } else {
+      toast.error((result.payload as string) ?? "Save failed");
+    }
+  };
+
+  // ── Reset
+  const handleReset = () => setForm(ORG_DEFAULT);
 
   return (
     <div className="min-h-screen bg-gray-100 px-4 py-8 sm:px-6 lg:px-8 font-[var(--font-inter)]">
@@ -66,26 +129,58 @@ export default function Settings() {
 
       <div className="space-y-4">
 
-        {/* General */}
+        {/* ── General (Redux) ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
-          <SectionHeader icon={alignJustifyIcon} iconBg="bg-orange-100" title="General" description="Manage your core company identity and contact details." />
-          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-600">Company Name</label>
-              <input type="text" defaultValue="LunchMate Solutions Inc." className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300" />
+          <SectionHeader
+            icon={alignJustifyIcon}
+            iconBg="bg-orange-100"
+            title="General"
+            description="Manage your core company identity and contact details."
+          />
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-4 border-orange-400 border-t-transparent" />
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-gray-600">Contact Email</label>
-              <input type="email" defaultValue="admin@lunchmate.corp" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300" />
-            </div>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm text-gray-600">Office Address</label>
-            <textarea defaultValue="123 Culinary Drive, Suite 400, Foodington, CA 90210" rows={2} className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300" />
-          </div>
+          ) : (
+            <>
+              {error && (
+                <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-500">{error}</p>
+              )}
+              <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm text-gray-600">Company Name</label>
+                  <input
+                    type="text"
+                    value={form.companyName}
+                    onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm text-gray-600">Contact Email</label>
+                  <input
+                    type="email"
+                    value={form.contactEmail}
+                    onChange={(e) => setForm((p) => ({ ...p, contactEmail: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm text-gray-600">Office Address</label>
+                <textarea
+                  value={form.officeAddress}
+                  onChange={(e) => setForm((p) => ({ ...p, officeAddress: e.target.value }))}
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                />
+              </div>
+            </>
+          )}
         </section>
 
-        {/* Meal Settings */}
+        {/* ── Meal Settings (local) ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
           <SectionHeader icon={utensilsIcon} iconBg="bg-blue-100" title="Meal Settings" description="Define default schedules and interaction rules for employee meals." />
           <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -118,7 +213,7 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Notifications */}
+        {/* ── Notifications (local) ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
           <SectionHeader icon={bellIcon} iconBg="bg-indigo-100" title="Notifications" description="Control how and when administrators receive platform updates." />
           <div className="space-y-5">
@@ -138,7 +233,7 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Security */}
+        {/* ── Security (local) ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
           <SectionHeader icon={shieldIcon} iconBg="bg-red-100" title="Security" description="Manage access credentials and multi-factor authentication." />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -160,12 +255,18 @@ export default function Settings() {
 
       {/* Footer */}
       <div className="mt-5 space-y-3">
-        <button className="w-full rounded-2xl bg-orange-500 py-4 text-base font-medium text-white hover:bg-orange-600 transition-colors">
-          Save Settings
+        <button
+          onClick={handleSave}
+          disabled={saving || loading}
+          className="w-full rounded-2xl bg-orange-500 py-4 text-base font-medium text-white hover:bg-orange-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {saving ? "Saving…" : "Save Settings"}
         </button>
         <div className="flex items-center justify-center gap-1.5">
           <img src={refreshIcon} alt="reset" className="h-3.5 w-3.5 opacity-50" />
-          <button className="text-sm text-gray-500 hover:text-gray-700">Reset to Default</button>
+          <button onClick={handleReset} className="text-sm text-gray-500 hover:text-gray-700">
+            Reset to Default
+          </button>
         </div>
       </div>
 

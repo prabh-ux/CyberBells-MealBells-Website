@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from "react";
 import headerLogo from "../../assets/headerLogo.png";
 import { useNavigate } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "../../slices/authSlice";
+import type { AppDispatch, RootState } from "../../app/store";
 
 function Header() {
   const links = ["Features", "Solutions", "Pricing", "Success Stories"];
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((s: RootState) => s.auth);
+  const isLoggedIn = !!user;
+
+  const handleLogout = async () => {
+    await dispatch(logoutUser());
+    setMenuOpen(false);
+    navigate("/login");
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -17,7 +30,9 @@ function Header() {
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [menuOpen]);
 
   return (
@@ -27,7 +42,7 @@ function Header() {
 
         {/* Logo */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
           className="flex items-center gap-[clamp(0.5rem,0.8vw,1.5rem)] z-50 relative"
         >
           <img
@@ -56,27 +71,50 @@ function Header() {
           ))}
         </nav>
 
-        {/* Desktop CTA buttons */}
+        {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-[clamp(0.75rem,1vw,2rem)]">
-          <button
-            type="button"
-            onClick={() => navigate('/login')}
-            style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
-            className="font-medium border border-[#8C7263] rounded-[clamp(0.5rem,0.6vw,1rem)] text-[clamp(0.875rem,1vw,2rem)] px-[clamp(1.25rem,1.5vw,3rem)] py-[clamp(0.5rem,0.7vw,1.5rem)] hover:bg-gray-50 transition-all"
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/register')}
-            style={{ fontFamily: "var(--font-inter)" }}
-            className="text-white font-normal bg-orange-500 rounded-[clamp(0.5rem,0.6vw,1rem)] text-[clamp(0.875rem,1vw,2rem)] px-[clamp(1.25rem,1.5vw,3rem)] py-[clamp(0.5rem,0.7vw,1.5rem)] hover:bg-orange-600 transition-all"
-          >
-            Get Started
-          </button>
+          {isLoggedIn ? (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate("/admin/dashboard")}
+                style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
+                className="font-medium border border-[#8C7263] rounded-[clamp(0.5rem,0.6vw,1rem)] text-[clamp(0.875rem,1vw,2rem)] px-[clamp(1.25rem,1.5vw,3rem)] py-[clamp(0.5rem,0.7vw,1.5rem)] hover:bg-gray-50 transition-all"
+              >
+                Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{ fontFamily: "var(--font-inter)" }}
+                className="text-white font-normal bg-orange-500 rounded-[clamp(0.5rem,0.6vw,1rem)] text-[clamp(0.875rem,1vw,2rem)] px-[clamp(1.25rem,1.5vw,3rem)] py-[clamp(0.5rem,0.7vw,1.5rem)] hover:bg-orange-600 transition-all"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
+                className="font-medium border border-[#8C7263] rounded-[clamp(0.5rem,0.6vw,1rem)] text-[clamp(0.875rem,1vw,2rem)] px-[clamp(1.25rem,1.5vw,3rem)] py-[clamp(0.5rem,0.7vw,1.5rem)] hover:bg-gray-50 transition-all"
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/signup")}
+                style={{ fontFamily: "var(--font-inter)" }}
+                className="text-white font-normal bg-orange-500 rounded-[clamp(0.5rem,0.6vw,1rem)] text-[clamp(0.875rem,1vw,2rem)] px-[clamp(1.25rem,1.5vw,3rem)] py-[clamp(0.5rem,0.7vw,1.5rem)] hover:bg-orange-600 transition-all"
+              >
+                Get Started
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Hamburger (mobile/tablet only) */}
+        {/* Hamburger */}
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
@@ -108,23 +146,48 @@ function Header() {
             </button>
           ))}
         </nav>
+
+        {/* Mobile CTA */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 sm:px-6 pb-5 pt-1">
-          <button
-            type="button"
-            onClick={() => { navigate('/login'); setMenuOpen(false); }}
-            style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
-            className="text-sm font-medium border border-[#8C7263] rounded-lg px-5 py-2.5 hover:bg-gray-50 transition-all"
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() => { navigate('/register'); setMenuOpen(false); }}
-            style={{ fontFamily: "var(--font-inter)" }}
-            className="text-white text-sm font-normal bg-orange-500 rounded-lg px-5 py-2.5 hover:bg-orange-600 transition-all"
-          >
-            Get Started
-          </button>
+          {isLoggedIn ? (
+            <>
+              <button
+                type="button"
+                onClick={() => { navigate("/admin/dashboard"); setMenuOpen(false); }}
+                style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
+                className="text-sm font-medium border border-[#8C7263] rounded-lg px-5 py-2.5 hover:bg-gray-50 transition-all"
+              >
+                Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{ fontFamily: "var(--font-inter)" }}
+                className="text-white text-sm font-normal bg-orange-500 rounded-lg px-5 py-2.5 hover:bg-orange-600 transition-all"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => { navigate("/login"); setMenuOpen(false); }}
+                style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
+                className="text-sm font-medium border border-[#8C7263] rounded-lg px-5 py-2.5 hover:bg-gray-50 transition-all"
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => { navigate("/signup"); setMenuOpen(false); }}
+                style={{ fontFamily: "var(--font-inter)" }}
+                className="text-white text-sm font-normal bg-orange-500 rounded-lg px-5 py-2.5 hover:bg-orange-600 transition-all"
+              >
+                Get Started
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>
