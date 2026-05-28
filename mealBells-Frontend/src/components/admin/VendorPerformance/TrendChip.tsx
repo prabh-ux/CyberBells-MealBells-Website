@@ -1,4 +1,3 @@
-import React from 'react'
 import arrowUpUrl   from "../../../assets/arrowUpUrl.png";
 
 const TrendChip = ({ value, suffix }: { value: string; suffix: string }) => (

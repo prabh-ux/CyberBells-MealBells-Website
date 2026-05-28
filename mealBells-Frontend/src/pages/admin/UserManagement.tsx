@@ -5,7 +5,7 @@ import type { AppDispatch, RootState } from "../../app/store";
 import {
   fetchUsers, toggleUserStatus, updateUser, importCSVUsers,
   optimisticToggle, revertToggle,
-} from "../../slices/userSlice";
+} from "../../slices/adminSlice";
 import toast from "react-hot-toast";
 
 import type { EditForm, StatusKey, User } from "../../types/admin";
@@ -22,7 +22,7 @@ export default function UserManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { users, loading, error, updating } = useSelector((s: RootState) => s.users);
+  const { users, loading, error, updating } = useSelector((s: RootState) => s.admin);
 
   const [search,    setSearch]    = useState("");
   const [status,    setStatus]    = useState<StatusKey>("All Status");

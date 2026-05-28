@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import headerLogo from "../../assets/headerLogo.png";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";

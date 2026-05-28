@@ -1,4 +1,3 @@
-import React from 'react'
 import uploadIconWhite from "../../../assets/uploadIconWhite.png";
 
 interface Props {

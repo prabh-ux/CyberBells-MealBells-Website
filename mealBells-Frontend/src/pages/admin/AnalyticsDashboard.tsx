@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { activities, ALL_MEALS_DATA, attendanceData } from "../../data/AnalyticsDashboard";
 
 import AnalyticsDashboardHeader from '../../components/admin/AnalyticsDashboard/AnalyticsDashboardHeader';

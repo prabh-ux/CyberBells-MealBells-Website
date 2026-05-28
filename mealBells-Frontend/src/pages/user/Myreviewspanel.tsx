@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import type { AxiosError } from "axios";
 import {
   ChevronLeft, ChevronRight, Star, FileText,
-  TrendingUp, Award, Flame, Tag, MessageSquare,
-  CalendarDays, UtensilsCrossed,
+  TrendingUp, Award, Flame, UtensilsCrossed,
 } from "lucide-react";
 
 const backendUrl = import.meta.env.VITE_BACKEND as string;
@@ -41,18 +39,11 @@ interface ApiError { msg?: string }
 
 const LIMIT = 9;
 
-const ASPECT_KEYS: { key: keyof Pick<Review, "taste" | "quantity" | "quality" | "freshness">; label: string }[] = [
-  { key: "taste",     label: "Taste"     },
-  { key: "quantity",  label: "Quantity"  },
-  { key: "quality",   label: "Quality"   },
-  { key: "freshness", label: "Freshness" },
-];
-
 function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
   const sz = size === "md" ? "w-5 h-5" : "w-3.5 h-3.5";
   return (
     <div className="flex gap-0.5">
-      {[1,2,3,4,5].map((s) => (
+      {[1, 2, 3, 4, 5].map((s) => (
         <Star
           key={s}
           className={`${sz} transition-colors ${
@@ -60,21 +51,6 @@ function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }
           }`}
         />
       ))}
-    </div>
-  );
-}
-
-function AspectBar({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[11px] text-gray-400 w-16 shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-orange-400 rounded-full transition-all duration-500"
-          style={{ width: `${(value / 5) * 100}%` }}
-        />
-      </div>
-      <span className="text-[11px] font-bold text-orange-500 w-4 text-right shrink-0">{value}</span>
     </div>
   );
 }
@@ -131,8 +107,8 @@ function ReviewCard({ review }: { review: Review }) {
     </div>
   );
 }
+
 export default function MyReviewsPanel() {
-  const navigate = useNavigate();
 
   const [data, setData]       = useState<ReviewsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -173,102 +149,104 @@ export default function MyReviewsPanel() {
     <div className="min-h-screen bg-[#F7F6F3]">
       <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
 
- {/* ── Header ── */}
+        {/* ── Header ── */}
         <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 leading-tight">My Reviews</h1>
-      </div>
-{data && (
-  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-
-    {/* Total Reviews */}
-    <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-      <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
-        <FileText className="w-5 h-5 text-orange-500" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900">{data.totalReviews}</p>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total Reviews</p>
-      </div>
-    </div>
-
-    {/* Avg Rating — fall back to single card's overallRating */}
-    {(() => {
-      const displayRating = data.avgRating > 0
-        ? data.avgRating
-        : data.reviews[0]?.overallRating ?? 0;
-      return (
-        <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-yellow-50 flex items-center justify-center shrink-0">
-            <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900">{displayRating || "—"}</p>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Rating</p>
-          </div>
+          <h1 className="text-4xl font-bold text-gray-900 leading-tight">My Reviews</h1>
         </div>
-      );
-    })()}
 
-   {/* 5-Star count — show actual rating if no 5-stars exist */}
-{(() => {
-  const fiveStarCount = data.reviews.filter((r) => r.overallRating === 5).length;
-  const singleRating = data.reviews[0]?.overallRating ?? 0;
-  const display = fiveStarCount > 0 ? fiveStarCount : singleRating;
-  const label = fiveStarCount > 0 ? "5★ This Page" : "Your Rating";
+        {/* ── Stat Cards ── */}
+        {data && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
-  return (
-    <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-      <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
-        <Award className="w-5 h-5 text-green-500" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900">{display}</p>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-      </div>
-    </div>
-  );
-})()}
+            {/* Total Reviews */}
+            <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{data.totalReviews}</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total Reviews</p>
+              </div>
+            </div>
 
-    {/* Taste Trend — fall back to single card's overallRating */}
-    {(() => {
-      const ratingBase = data.avgRating > 0
-        ? data.avgRating
-        : data.reviews[0]?.overallRating ?? 0;
-      const label =
-        ratingBase >= 4.5 ? "Excellent" :
-        ratingBase >= 3.5 ? "Great" :
-        ratingBase >= 2.5 ? "Good" :
-        ratingBase >= 1   ? "Fair" : "—";
-      const color =
-        ratingBase >= 4.5 ? "text-green-600" :
-        ratingBase >= 3.5 ? "text-blue-600" :
-        ratingBase >= 2.5 ? "text-yellow-600" :
-        ratingBase >= 1   ? "text-red-500" : "text-gray-400";
-      const bg =
-        ratingBase >= 4.5 ? "bg-green-50" :
-        ratingBase >= 3.5 ? "bg-blue-50" :
-        ratingBase >= 2.5 ? "bg-yellow-50" :
-        ratingBase >= 1   ? "bg-red-50" : "bg-gray-50";
-      const iconColor =
-        ratingBase >= 4.5 ? "text-green-500" :
-        ratingBase >= 3.5 ? "text-blue-500" :
-        ratingBase >= 2.5 ? "text-yellow-500" :
-        ratingBase >= 1   ? "text-red-400" : "text-gray-300";
-      return (
-        <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${bg}`}>
-            <TrendingUp className={`w-5 h-5 ${iconColor}`} />
+            {/* Avg Rating */}
+            {(() => {
+              const displayRating = data.avgRating > 0
+                ? data.avgRating
+                : data.reviews[0]?.overallRating ?? 0;
+              return (
+                <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-yellow-50 flex items-center justify-center shrink-0">
+                    <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{displayRating || "—"}</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Avg Rating</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 5-Star count */}
+            {(() => {
+              const fiveStarCount = data.reviews.filter((r) => r.overallRating === 5).length;
+              const singleRating  = data.reviews[0]?.overallRating ?? 0;
+              const display       = fiveStarCount > 0 ? fiveStarCount : singleRating;
+              const label         = fiveStarCount > 0 ? "5★ This Page" : "Your Rating";
+              return (
+                <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
+                    <Award className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{display}</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Taste Trend */}
+            {(() => {
+              const ratingBase = data.avgRating > 0
+                ? data.avgRating
+                : data.reviews[0]?.overallRating ?? 0;
+              const label =
+                ratingBase >= 4.5 ? "Excellent" :
+                ratingBase >= 3.5 ? "Great"     :
+                ratingBase >= 2.5 ? "Good"      :
+                ratingBase >= 1   ? "Fair"      : "—";
+              const color =
+                ratingBase >= 4.5 ? "text-green-600"  :
+                ratingBase >= 3.5 ? "text-blue-600"   :
+                ratingBase >= 2.5 ? "text-yellow-600" :
+                ratingBase >= 1   ? "text-red-500"    : "text-gray-400";
+              const bg =
+                ratingBase >= 4.5 ? "bg-green-50"  :
+                ratingBase >= 3.5 ? "bg-blue-50"   :
+                ratingBase >= 2.5 ? "bg-yellow-50" :
+                ratingBase >= 1   ? "bg-red-50"    : "bg-gray-50";
+              const iconColor =
+                ratingBase >= 4.5 ? "text-green-500"  :
+                ratingBase >= 3.5 ? "text-blue-500"   :
+                ratingBase >= 2.5 ? "text-yellow-500" :
+                ratingBase >= 1   ? "text-red-400"    : "text-gray-300";
+              return (
+                <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${bg}`}>
+                    <TrendingUp className={`w-5 h-5 ${iconColor}`} />
+                  </div>
+                  <div>
+                    <p className={`text-2xl font-bold ${color}`}>{label}</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Taste Trend</p>
+                  </div>
+                </div>
+              );
+            })()}
+
           </div>
-          <div>
-            <p className={`text-2xl font-bold ${color}`}>{label}</p>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Taste Trend</p>
-          </div>
-        </div>
-      );
-    })()}
+        )}
 
-  </div>
-)}
         {/* ── Content ── */}
         {loading ? (
           <div className="flex items-center justify-center py-32">

@@ -1,4 +1,3 @@
-import React from 'react'
 import calander from '../../assets/calander.png';
 import attendence from '../../assets/attendence.png';
 import attendence2 from '../../assets/attendence2.png';

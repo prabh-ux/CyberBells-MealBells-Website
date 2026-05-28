@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../app/store";
-import { addUser, resetUserState } from "../../slices/userSlice";
+import { addUser, resetUserState } from "../../slices/adminSlice";
 import {
   User, Mail, Phone, Save, Loader2, UploadCloud,
 } from "lucide-react";
@@ -19,7 +19,7 @@ type ErrorFields = Partial<Record<
 const AddUser = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { adding, error } = useSelector((s: RootState) => s.users);
+  const { adding, error } = useSelector((s: RootState) => s.admin);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver,    setDragOver]    = useState(false);

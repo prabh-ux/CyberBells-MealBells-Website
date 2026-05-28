@@ -1,4 +1,3 @@
-import React from 'react'
 import starFull     from "../../../assets/starFull.png";
 import starHalf     from "../../../assets/starHalf.png";
 const StarRating = ({ rating }: { rating: number }) => (

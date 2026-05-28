@@ -23,28 +23,19 @@ interface Schedule {
 
 export default function WeeklyMenuPanel() {
   const navigate = useNavigate();
-  const [offset, setOffset] = useState(0);
+  const [offset]    = useState(0);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [weekLabel, setWeekLabel] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
 
   const fetchWeek = async (off: number) => {
     setLoading(true);
     try {
       const res = await axios.get(
         `${backendUrl}/user/menu-weekly?offset=${off}`,
-        {
-          withCredentials: true,
-        },
+        { withCredentials: true }
       );
       if (res.data.success) {
-        const { weekStart, weekEnd, schedules: s } = res.data.data;
-        const fmt = (d: string) =>
-          new Date(d).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
-        setWeekLabel(`${fmt(weekStart)} – ${fmt(weekEnd)}`);
+        const { schedules: s } = res.data.data;
         setSchedules(s);
       }
     } catch (err: any) {
@@ -54,28 +45,23 @@ export default function WeeklyMenuPanel() {
     }
   };
 
-  useEffect(() => {
-    fetchWeek(offset);
-  }, [offset]);
+  useEffect(() => { fetchWeek(offset); }, [offset]);
 
-  const dayName = (iso: string) =>
+  const dayName  = (iso: string) =>
     new Date(iso).toLocaleDateString("en-US", { weekday: "long" });
   const shortDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  const isToday = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const isToday  = (iso: string) =>
     new Date(iso).toDateString() === new Date().toDateString();
-  const isPast = (iso: string) => new Date(iso) < new Date() && !isToday(iso);
+  const isPast   = (iso: string) =>
+    new Date(iso) < new Date() && !isToday(iso);
 
   return (
     <div className="min-h-screen bg-[#F7F6F3] px-8 py-10 lg:px-12">
+
       {/* ── Header ── */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 leading-tight">
-          Weekly Menu
-        </h1>
+        <h1 className="text-4xl font-bold text-gray-900 leading-tight">Weekly Menu</h1>
       </div>
 
       {/* ── Content ── */}
@@ -86,9 +72,7 @@ export default function WeeklyMenuPanel() {
       ) : schedules.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-40 gap-4">
           <UtensilsCrossed className="w-12 h-12 text-gray-300" />
-          <p className="text-gray-400 text-base">
-            No meals scheduled this week
-          </p>
+          <p className="text-gray-400 text-base">No meals scheduled this week</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-10">
@@ -99,18 +83,10 @@ export default function WeeklyMenuPanel() {
             >
               {/* Day label row */}
               <div className="flex items-center gap-2 mb-2.5 px-0.5">
-                <span
-                  className={`text-[13px] font-bold tracking-wide ${
-                    isToday(s.scheduledDate)
-                      ? "text-orange-500"
-                      : "text-gray-700"
-                  }`}
-                >
+                <span className={`text-[13px] font-bold tracking-wide ${isToday(s.scheduledDate) ? "text-orange-500" : "text-gray-700"}`}>
                   {dayName(s.scheduledDate)}
                 </span>
-                <span className="text-[12px] text-gray-400 font-medium">
-                  {shortDate(s.scheduledDate)}
-                </span>
+                <span className="text-[12px] text-gray-400 font-medium">{shortDate(s.scheduledDate)}</span>
                 {isToday(s.scheduledDate) && (
                   <span className="ml-auto bg-orange-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     Today
@@ -118,14 +94,12 @@ export default function WeeklyMenuPanel() {
                 )}
               </div>
 
-              {/* ── Card ── matches reference: tall image, clean info strip */}
+              {/* ── Card ── */}
               <div
-                onClick={() =>
-                  navigate(`/user/dish-details-panel/${s.scheduleId}`)
-                }
+                onClick={() => navigate(`/user/dish-details-panel/${s.scheduleId}`)}
                 className="bg-white rounded-[24px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.07)] border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-[0_6px_24px_rgba(0,0,0,0.11)] hover:-translate-y-0.5 active:scale-[0.985] group"
               >
-                {/* Image area — tall like reference */}
+                {/* Image area */}
                 <div className="relative w-full h-52 overflow-hidden">
                   {s.dish?.image ? (
                     <img
@@ -139,40 +113,23 @@ export default function WeeklyMenuPanel() {
                     </div>
                   )}
 
-                  {/* Soft gradient at bottom for text legibility */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
 
                   {/* Veg / Non-veg badge */}
-                  <div
-                    className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-md ${
-                      s.dish?.dishType === "Veg"
-                        ? "text-green-500 bg-white"
-                        : "text-red-500 bg-white"
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                        s.dish?.dishType === "Veg"
-                          ? "bg-green-500"
-                          : "bg-red-500"
-                      }`}
-                    />
-
+                  <div className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-md ${s.dish?.dishType === "Veg" ? "text-green-500 bg-white" : "text-red-500 bg-white"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dish?.dishType === "Veg" ? "bg-green-500" : "bg-red-500"}`} />
                     <span className="text-[10px] font-bold uppercase tracking-wide leading-none">
-                      {s.dish?.dishType === "Veg"
-                        ? "Vegetarian"
-                        : "Non-Vegetarian"}
+                      {s.dish?.dishType === "Veg" ? "Vegetarian" : "Non-Vegetarian"}
                     </span>
                   </div>
-                  {/* Response status badge — top right, matches reference "Next Skip" style */}
-                  {/* Response status badge */}
+
+                  {/* Response badge */}
                   {s.myResponse === "yes" && (
                     <div className="absolute top-3 right-3 bg-orange-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">
                       <Check className="w-3 h-3 stroke-[3]" />
                       Eating
                     </div>
                   )}
-
                   {s.myResponse === "no" && (
                     <div className="absolute top-3 right-3 bg-gray-800/80 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
                       <X className="w-3 h-3 stroke-[3]" />
@@ -181,22 +138,16 @@ export default function WeeklyMenuPanel() {
                   )}
                 </div>
 
-                {/* ── Info strip — tight and clean like reference ── */}
+                {/* Info strip */}
                 <div className="px-4 pt-3.5 pb-4">
-                  {/* Dish name */}
                   <h3 className="font-bold text-gray-900 text-[15px] leading-snug mb-2.5 line-clamp-1">
                     {s.dish?.name}
                   </h3>
-
-                  {/* Calories + tags — single row */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Calorie chip — matches reference style */}
                     <span className="flex items-center gap-1 bg-gray-100 rounded-full px-2.5 py-1 text-[11px] font-semibold text-gray-500">
                       <Flame className="w-3 h-3 text-orange-400 flex-shrink-0" />
                       {s.dish?.estimatedCalories}
                     </span>
-
-                    {/* Tags */}
                     {s.dish?.tags?.slice(0, 2).map((t) => (
                       <span
                         key={t}
@@ -213,7 +164,7 @@ export default function WeeklyMenuPanel() {
         </div>
       )}
 
-      {/* ── Bottom CTA — matches reference orange button ── */}
+      {/* ── Bottom CTA ── */}
       <div className="pt-2 pb-4">
         <button
           onClick={() => navigate("/user/dish-request")}

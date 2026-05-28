@@ -1,4 +1,3 @@
-import React from 'react'
 import type { MenuItem } from '../../../types/admin';
 import DietBadge from './DietBadge';
 import clock             from "../../../assets/clock.png";

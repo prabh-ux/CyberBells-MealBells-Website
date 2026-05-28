@@ -1,4 +1,3 @@
-import React from 'react'
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 const AttendanceTooltipContent = ({ active, payload, label }: any) => {

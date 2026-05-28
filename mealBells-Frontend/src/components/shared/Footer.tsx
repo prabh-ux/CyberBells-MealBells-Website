@@ -1,4 +1,3 @@
-import React from 'react'
 import headerLogo from "../../assets/headerLogo.png";
 
 function Footer() {

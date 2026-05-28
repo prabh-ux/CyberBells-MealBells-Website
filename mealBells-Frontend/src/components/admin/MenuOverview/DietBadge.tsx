@@ -1,4 +1,3 @@
-import React from 'react'
 import type { DietType } from '../../../types/admin';
 
 const DietBadge=({ type }: { type: DietType })=> {

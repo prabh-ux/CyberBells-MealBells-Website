@@ -1,17 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  ChevronLeft,
-  Bike,
+import { Bike,
   CheckCircle2,
-  Circle,
-  Clock,
   MapPin,
   Package,
   ShoppingBag,
   Utensils,
-  RefreshCw,
-} from "lucide-react";
+  RefreshCw } from "lucide-react";
 
 interface TrackingStep {
   id: string;
@@ -29,40 +23,35 @@ const STEPS: TrackingStep[] = [
     time: "11:30 AM",
     scheduledTime: null,
     status: "done",
-    icon: Utensils,
-  },
+    icon: Utensils },
   {
     id: "packed",
     label: "Packed",
     time: "11:45 AM",
     scheduledTime: null,
     status: "done",
-    icon: Package,
-  },
+    icon: Package },
   {
     id: "delivery",
     label: "Out for Delivery",
     time: "12:05 PM",
     scheduledTime: null,
     status: "active",
-    icon: Bike,
-  },
+    icon: Bike },
   {
     id: "arrived",
     label: "Arrived at Office",
     time: null,
     scheduledTime: "12:20 PM",
     status: "pending",
-    icon: MapPin,
-  },
+    icon: MapPin },
   {
     id: "pickup",
     label: "Ready for Pickup",
     time: null,
     scheduledTime: "12:30 PM",
     status: "pending",
-    icon: ShoppingBag,
-  },
+    icon: ShoppingBag },
 ];
 
 export default function DeliveryStatus() {
@@ -182,9 +171,8 @@ export default function DeliveryStatus() {
                 <div className="absolute left-5 top-5 bottom-5 w-px bg-gray-100" />
 
                 <div className="space-y-0">
-                  {STEPS.map((step, idx) => {
+                  {STEPS.map((step, _) => {
                     const Icon = step.icon;
-                    const isLast = idx === STEPS.length - 1;
 
                     return (
                       <div

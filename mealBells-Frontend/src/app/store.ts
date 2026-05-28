@@ -3,7 +3,7 @@ import dishReducer   from "../slices/dishSlice";
 import vendorReducer from "../slices/vendorSlice";
 import authReducer from "../slices/authSlice";
 import organizationReducer from "../slices/organizationSlice";
-import userReducer from "../slices/userSlice";
+import adminReducer from "../slices/adminSlice";
 
 export const store = configureStore({
   reducer: {
@@ -11,7 +11,7 @@ export const store = configureStore({
     vendors: vendorReducer,
     auth: authReducer,
    organization: organizationReducer,
-   users: userReducer,
+   admin: adminReducer,
   },
 });
 

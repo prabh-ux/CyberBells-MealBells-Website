@@ -1,4 +1,3 @@
-import React from 'react'
 import watchDemoLogo from '../../assets/watchDemoLogo.png'
 import heroImage from '../../assets/heroSectionImage.png'
 

@@ -1,4 +1,4 @@
-import type { KpiSet, PeriodKey, VendorKey } from "../types/admin";
+import type { KpiSet, TimeSlotKey, VendorKey } from "../types/admin";
 import dishTeriyaki from "../assets/dishTeriyaki.png"
 import dishQuinoa   from "../assets/dishQuinoa.png";
 import dishCurry    from "../assets/dishCurry.png";
@@ -32,7 +32,7 @@ const mkKpi = (
 });
 
 
-export const DATA: Record<VendorKey, Record<PeriodKey, KpiSet>> = {
+export const DATA: Record<VendorKey, Record<TimeSlotKey, KpiSet>> = {
   "All Vendors": {
     "Full Time":    mkKpi([94.8,"1.2%",4.7,1248,98.2,"0.5%",88,92],[58,76,63,89,68,91,73],[58,54,96,57,61,56,59,62]),
      "Breakfast":    mkKpi([93.6,"0.8%",4.5,1102,97.7,"0.2%",85,89],[62,71,55,82,74,88,69],[52,60,88,55,58,62,57,65]),

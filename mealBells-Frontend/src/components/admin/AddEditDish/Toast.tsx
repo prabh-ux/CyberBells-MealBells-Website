@@ -1,4 +1,3 @@
-import React from 'react'
 import type { ToastState } from '../../../types/admin';
 
 const Toast = ({ toast, onClose }: { toast: ToastState; onClose: () => void }) => {

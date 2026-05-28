@@ -18,7 +18,7 @@ export interface UserRecord {
 // ── Thunks ───────────────────────────────────────────────────────────────────
 
 export const addUser = createAsyncThunk(
-  "users/addUser",
+  "admin/addUser",
   async (payload: FormData, { rejectWithValue }) => {
     try {
       const { data } = await axiosInstance.post("/admin/users/add", payload, {
@@ -37,7 +37,7 @@ export const addUser = createAsyncThunk(
 );
 
 export const fetchUsers = createAsyncThunk(
-  "users/fetchAll",
+  "admin/fetchAll",
   async (_, { rejectWithValue }) => {
     try {
       const { data } = await axiosInstance.get("/admin/users");
@@ -67,7 +67,7 @@ export const fetchUsers = createAsyncThunk(
 );
 
 export const toggleUserStatus = createAsyncThunk(
-  "users/toggleStatus",
+  "admin/toggleStatus",
   async ({ id, currentStatus }: { id: string; currentStatus: string }, { rejectWithValue }) => {
     try {
       const { data } = await axiosInstance.patch(`/admin/user/${id}/status`, {
@@ -85,7 +85,7 @@ export const toggleUserStatus = createAsyncThunk(
 );
 
 export const updateUser = createAsyncThunk(
-  "users/updateUser",
+  "admin/updateUser",
   async ({ id, form, file }: { id: string; form: EditForm; file?: File }, { rejectWithValue }) => {
     try {
       const payload = new FormData();
@@ -115,14 +115,14 @@ export const updateUser = createAsyncThunk(
 
 // ── Slice ─────────────────────────────────────────────────────────────────────
 
-const userSlice = createSlice({
-  name: "users",
+const adminSlice = createSlice({
+  name: "admin",
   initialState: {
     users:    [] as User[],
     loading:  false,
     adding:   false,
     updating: false,
-    toggling: null as string | null,   // holds the id being toggled
+    toggling: null as string | null,
     error:    null as string | null,
   },
   reducers: {
@@ -184,5 +184,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { resetUserState, optimisticToggle, revertToggle, importCSVUsers } = userSlice.actions;
-export default userSlice.reducer;
+export const { resetUserState, optimisticToggle, revertToggle, importCSVUsers } = adminSlice.actions;
+export default adminSlice.reducer;

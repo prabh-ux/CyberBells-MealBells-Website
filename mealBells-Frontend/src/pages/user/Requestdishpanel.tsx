@@ -1,9 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import {
-  ArrowLeft,
-  CalendarDays,
+import { CalendarDays,
   Utensils,
   Leaf,
   Drumstick,
@@ -14,8 +11,7 @@ import {
   Send,
   CheckCircle2,
   RotateCcw,
-  X,
-} from "lucide-react";
+  X } from "lucide-react";
 
 const backendUrl = import.meta.env.VITE_BACKEND;
 
@@ -56,7 +52,6 @@ const SPICE_OPTS: { value: SpiceLevel; label: string; Icon: React.ElementType; a
 ];
 
 export default function RequestDishPanel() {
-  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<string>(DATE_OPTIONS[0].value);
   const [suggestion,   setSuggestion]   = useState<string>("");
   const [diet,         setDiet]         = useState<DietOption>("Both");
@@ -76,8 +71,7 @@ export default function RequestDishPanel() {
           requestedDate:     selectedDate,
           dishSuggestion:    suggestion,
           dietaryPreference: diet,
-          spiceLevel:        spice,
-        },
+          spiceLevel:        spice },
         { withCredentials: true }
       );
       if (res.data.success) {

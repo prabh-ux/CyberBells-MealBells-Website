@@ -1,4 +1,3 @@
-import React from 'react'
 import CTASectionBg from '../../assets/CTASectionBg.png'
 
 function CTASection() {

@@ -85,9 +85,6 @@ export default function TodayMenuPanel() {
 
   const { dish, colleaguesEating, colleagueAvatars, myResponse } = data;
 
-  const dateStr = new Date().toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric",
-  });
 
   const visibleAvatars = colleagueAvatars.slice(0, 3);
   const overflowCount  = Math.max(0, colleaguesEating - visibleAvatars.length);

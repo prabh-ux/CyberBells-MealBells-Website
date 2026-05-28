@@ -1,9 +1,7 @@
 import { useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
-} from "recharts";
+  Tooltip, ResponsiveContainer } from "recharts";
 
 import IcDownload from "../../assets/IcDownload.png";
 import IcFilter   from "../../assets/IcFilter.png";
@@ -14,7 +12,7 @@ import tickMarkGreen      from "../../assets/tickMarkGreen.png";
 import foodWastageFooterBg from "../../assets/foodWastageFooterBg.png";
 import DropDown from "../../components/shared/DropDown";
 import { MEALS, PERIODS, VENDORS } from "../../data/adminData";
-import type { FilterRow, TooltipEntry } from "../../types/admin";
+import type { FilterRow } from "../../types/admin";
 import { CHART_LEGEND, chartData, NAV_ICONS, statCards, TABLE_HEADERS, tableRows } from "../../data/FoodWastageReport";
 import CustomTooltip from "../../components/admin/FoodWastageReport/CustomTooltip";
 

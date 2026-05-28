@@ -1,4 +1,3 @@
-import React from 'react'
 import userIconUrl   from "../../../assets/userIconUrl.png";
 import vendorIconUrl from "../../../assets/vendorIconUrl.png";
 import checkIconUrl  from "../../../assets/checkIconUrl.png";

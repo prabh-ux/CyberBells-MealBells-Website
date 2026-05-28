@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useEffect } from "react";
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useLocation } from 'react-router-dom'
 import bellIcon from '../../assets/bellIcon.png'
@@ -14,7 +14,7 @@ const UserHeader = () => {
   const isProfile      = location.pathname === '/user/profile'
   const isNotification = location.pathname === '/user/notification'
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user) dispatch(fetchMe())
   }, [])
 

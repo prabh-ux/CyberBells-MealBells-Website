@@ -1,4 +1,3 @@
-import React from 'react'
 import { BarChart, Bar, Cell, XAxis, ResponsiveContainer, Tooltip } from "recharts";
 import dropDown from "../../../assets/dropDown.png";
 

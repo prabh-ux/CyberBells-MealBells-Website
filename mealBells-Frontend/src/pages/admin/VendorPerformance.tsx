@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Cell, PieChart, Pie, Tooltip
@@ -21,25 +21,23 @@ import StarRating from "../../components/admin/VendorPerformance/StarRating";
 import StatusBadge from "../../components/admin/VendorPerformance/StatusBadge";
 import { fetchVendors } from "../../slices/vendorSlice";
 import type { AppDispatch, RootState } from "../../app/store";
-import type { PeriodKey } from "../../types/admin";
+import type { TimeSlotKey } from "../../types/admin";
 
 const VendorPerformance = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { list: vendors } = useSelector((s: RootState) => s.vendors);
 
   const [vendor, setVendor]           = useState("All Vendors");
-  const [period, setPeriod]           = useState<PeriodKey>("All Time");
+  const [period, setPeriod]           = useState<TimeSlotKey>("Full Time");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showAll, setShowAll]         = useState(false);
 
   useEffect(() => { dispatch(fetchVendors()); }, [dispatch]);
 
-  // Build vendor options from real data
   const vendorOptions = ["All Vendors", ...vendors.map(v => v.name)];
 
-  // Safe KPI lookup — fall back to first available vendor/period if key missing
   const firstVendorKey = Object.keys(DATA)[0];
-  const firstPeriodKey = Object.keys(DATA[firstVendorKey] ?? {})[0] as PeriodKey;
+  const firstPeriodKey = Object.keys(DATA[firstVendorKey] ?? {})[0] as TimeSlotKey;
 
   const vendorKey = DATA[vendor] ? vendor : firstVendorKey;
   const periodKey = DATA[vendorKey]?.[period] ? period : firstPeriodKey;
@@ -73,7 +71,7 @@ const VendorPerformance = () => {
               icon={calanderIcon}
               value={period}
               options={PERIODS}
-              onChange={v => { setPeriod(v as PeriodKey); setSelectedDay(null); }}
+              onChange={v => { setPeriod(v as TimeSlotKey); setSelectedDay(null); }}
             />
           </div>
         </div>
@@ -91,7 +89,7 @@ const VendorPerformance = () => {
             <div className="flex gap-3 items-center">
               <p className="text-3xl font-bold leading-none text-[var(--text-primary)]">{kpi.rating}</p>
               <div className="flex gap-0.5">
-                {[starFull,starFull,starFull,starFull,starHalf].map((s, i) => (
+                {[starFull, starFull, starFull, starFull, starHalf].map((s, i) => (
                   <img key={i} src={s} alt="" className="w-5 h-5" />
                 ))}
               </div>
@@ -137,7 +135,7 @@ const VendorPerformance = () => {
                 )}
               </div>
               <div className="flex items-center gap-5">
-                {[["#FF7A00","Actual"], ["#E2E2E2","Target"]].map(([color, lbl]) => (
+                {[["#FF7A00", "Actual"], ["#E2E2E2", "Target"]].map(([color, lbl]) => (
                   <span key={lbl} className="flex items-center gap-1.5 text-xs text-[var(--text-label)]">
                     <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: color }} />{lbl}
                   </span>
@@ -167,9 +165,10 @@ const VendorPerformance = () => {
                     tick={{ fontSize: 11, fill: "var(--text-label)" }} />
                   <YAxis hide />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,122,0,0.05)" }} />
-                  <Bar dataKey="actual" radius={[6,6,6,6]} isAnimationActive={false} maxBarSize={48} style={{ cursor: "pointer" }}>
+                  <Bar dataKey="actual" radius={[6, 6, 6, 6]} isAnimationActive={false} maxBarSize={48} style={{ cursor: "pointer" }}>
                     {kpi.deliveryData.map(d => (
-                      <Cell key={d.day}
+                      <Cell
+                        key={d.day}
                         fill={selectedDay === d.day ? "url(#barGradSel)" : "url(#barGrad)"}
                         stroke={selectedDay === d.day ? "#FF7A00" : "none"}
                         strokeWidth={selectedDay === d.day ? 1.5 : 0}
@@ -192,7 +191,7 @@ const VendorPerformance = () => {
                       tickMargin={12} tick={{ fontSize: 11, fill: "#6b7280" }} />
                     <YAxis hide domain={[0, 100]} />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,122,0,0.05)" }} />
-                    <Bar dataKey="v" radius={[6,6,6,6]} isAnimationActive={false}>
+                    <Bar dataKey="v" radius={[6, 6, 6, 6]} isAnimationActive={false}>
                       {kpi.ratingTrend.map((_, i) => (
                         <Cell key={i} fill={i === peakIndex ? "#f97316" : "#fde8d8"} />
                       ))}
@@ -207,7 +206,7 @@ const VendorPerformance = () => {
               <div className="flex items-center gap-5 mt-2">
                 <PieChart width={100} height={100}>
                   <Pie
-                    data={[{ name:"Positives", value:kpi.positives }, { name:"Complaints", value:100 - kpi.positives }]}
+                    data={[{ name: "Positives", value: kpi.positives }, { name: "Complaints", value: 100 - kpi.positives }]}
                     cx={45} cy={45} innerRadius={32} outerRadius={46}
                     startAngle={90} endAngle={-270}
                     dataKey="value" strokeWidth={0} paddingAngle={3}
@@ -248,6 +247,7 @@ const VendorPerformance = () => {
             </button>
           </div>
 
+          {/* Mobile */}
           <div className="md:hidden border-t border-[#f1e4da]">
             {rows.map((row, i) => (
               <div key={i} className="border-b border-[#f1e4da] last:border-b-0 p-4">
@@ -271,16 +271,20 @@ const VendorPerformance = () => {
             ))}
           </div>
 
+          {/* Desktop */}
           <div className="hidden md:block">
             <div className="grid grid-cols-[1fr_2fr_1fr_2fr_1fr] px-5 py-2.5 border-t border-b border-[#f1e4da] bg-[#F5F5F5]">
-              {["Date","Dish","Rating","Complaints","Delivery Status"].map((col, i) => (
+              {["Date", "Dish", "Rating", "Complaints", "Delivery Status"].map((col, i) => (
                 <p key={col} className={`text-xs font-bold tracking-[0.08em] uppercase text-[var(--text-label)] ${i === 4 ? "text-right" : ""}`}>
                   {col}
                 </p>
               ))}
             </div>
             {rows.map((row, i) => (
-              <div key={i} className={`grid grid-cols-[1fr_2fr_1fr_2fr_1fr] items-center px-5 py-3.5 hover:bg-[#FFF7ED]/40 transition-colors ${i !== rows.length - 1 ? "border-b border-[#f1e4da]" : ""}`}>
+              <div
+                key={i}
+                className={`grid grid-cols-[1fr_2fr_1fr_2fr_1fr] items-center px-5 py-3.5 hover:bg-[#FFF7ED]/40 transition-colors ${i !== rows.length - 1 ? "border-b border-[#f1e4da]" : ""}`}
+              >
                 <p className="text-sm font-bold text-[var(--text-primary)]">{row.date}</p>
                 <div className="flex items-center gap-3 min-w-0">
                   <img src={row.image} alt={row.dish} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />

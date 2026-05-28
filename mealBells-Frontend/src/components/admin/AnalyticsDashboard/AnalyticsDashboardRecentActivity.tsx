@@ -1,4 +1,3 @@
-import React from "react";
 import type { RefObject } from "react";
 import searchIcon from "../../../assets/searchIcon.png";
 import filterIcon from "../../../assets/filterIcon.png";

@@ -1,4 +1,3 @@
-import React from "react";
 import type { TooltipEntry } from "../../../types/admin";
 
 type CustomTooltipProps = {
