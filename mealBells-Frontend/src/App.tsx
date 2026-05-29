@@ -34,7 +34,8 @@ import DeliveryStatus from "./pages/user/DeliveryStatus";
 import MyConsumptionReport from "./pages/user/MyConsumptionReport";
 import Profile from "./pages/user/Profile";
 import Notifications from "./pages/user/Notifications";
-import Login from "./pages/auth/Login";
+import Login from "./pages/auth/login";
+
 
 function App() {
   const location = useLocation();
