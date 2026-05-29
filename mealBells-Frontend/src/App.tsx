@@ -23,7 +23,6 @@ import AttendanceSummary from "./pages/admin/AttendanceSummary";
 import ConsumptionAnalytics from "./pages/admin/ConsumptionAnalytics";
 import ProfileSettings from "./pages/admin/ProfileSettings";
 import Signup from "./pages/auth/Signup";
-import Login from "./pages/auth/Login";
 import TodayMenuPanel from "./pages/user/TodayMenuPanel";
 import WeeklyMenuPanel from "./pages/user/Weeklymenupanel";
 import DishDetailsPanel from "./pages/user/Dishdetailspanel";
@@ -35,6 +34,7 @@ import DeliveryStatus from "./pages/user/DeliveryStatus";
 import MyConsumptionReport from "./pages/user/MyConsumptionReport";
 import Profile from "./pages/user/Profile";
 import Notifications from "./pages/user/Notifications";
+import Login from "./pages/auth/Login";
 
 function App() {
   const location = useLocation();

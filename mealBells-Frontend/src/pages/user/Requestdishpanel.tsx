@@ -1,6 +1,14 @@
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  submitDishRequest,
+  resetDishRequest,
+} from "../../slices/userSlice";
+import type { AppDispatch, RootState } from "../../app/store";
+import type { DietOption, SpiceLevel } from "../../slices/userSlice";
 import { useState } from "react";
-import axios from "axios";
-import { CalendarDays,
+import {
+  CalendarDays,
   Utensils,
   Leaf,
   Drumstick,
@@ -11,12 +19,8 @@ import { CalendarDays,
   Send,
   CheckCircle2,
   RotateCcw,
-  X } from "lucide-react";
-
-const backendUrl = import.meta.env.VITE_BACKEND;
-
-type DietOption = "Veg" | "Non-Veg" | "Both";
-type SpiceLevel = "Mild" | "Normal" | "Spicy";
+  X,
+} from "lucide-react";
 
 interface DateOption {
   value: string;
@@ -46,88 +50,88 @@ const DIET_OPTS: { value: DietOption; label: string; Icon: React.ElementType; ac
 ];
 
 const SPICE_OPTS: { value: SpiceLevel; label: string; Icon: React.ElementType; activeClass: string; desc: string }[] = [
-  { value: "Mild",   label: "Mild",   Icon: Wind,  desc: "Light & gentle",    activeClass: "bg-sky-500 border-sky-500 text-white shadow-sky-200"       },
-  { value: "Normal", label: "Normal", Icon: Flame, desc: "Balanced heat",     activeClass: "bg-orange-500 border-orange-500 text-white shadow-orange-200" },
-  { value: "Spicy",  label: "Spicy",  Icon: Zap,   desc: "Bold & fiery",      activeClass: "bg-red-500 border-red-500 text-white shadow-red-200"        },
+  { value: "Mild",   label: "Mild",   Icon: Wind,  desc: "Light & gentle",  activeClass: "bg-sky-500 border-sky-500 text-white shadow-sky-200"         },
+  { value: "Normal", label: "Normal", Icon: Flame, desc: "Balanced heat",   activeClass: "bg-orange-500 border-orange-500 text-white shadow-orange-200" },
+  { value: "Spicy",  label: "Spicy",  Icon: Zap,   desc: "Bold & fiery",    activeClass: "bg-red-500 border-red-500 text-white shadow-red-200"          },
 ];
 
 export default function RequestDishPanel() {
+  const dispatch = useDispatch<AppDispatch>();
+
+  const {
+    dishRequestSuccess:    success,
+    submittingDishRequest: loading,
+    dishRequestError:      error,
+  } = useSelector((state: RootState) => state.user);
+
   const [selectedDate, setSelectedDate] = useState<string>(DATE_OPTIONS[0].value);
   const [suggestion,   setSuggestion]   = useState<string>("");
   const [diet,         setDiet]         = useState<DietOption>("Both");
   const [spice,        setSpice]        = useState<SpiceLevel>("Normal");
-  const [loading,      setLoading]      = useState<boolean>(false);
-  const [success,      setSuccess]      = useState<boolean>(false);
-  const [error,        setError]        = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  // Clean up slice state when this component unmounts
+  useEffect(() => {
+    return () => { dispatch(resetDishRequest()); };
+  }, [dispatch]);
+
+  const handleSubmit = () => {
     if (!selectedDate) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await axios.post(
-        `${backendUrl}/user/dish-request`,
-        {
-          requestedDate:     selectedDate,
-          dishSuggestion:    suggestion,
-          dietaryPreference: diet,
-          spiceLevel:        spice },
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        setSuccess(true);
-      } else {
-        setError(res.data.msg ?? "Something went wrong.");
-      }
-    } catch (e: any) {
-      setError(e?.response?.data?.msg ?? "Failed to submit request.");
-    } finally {
-      setLoading(false);
-    }
+    dispatch(submitDishRequest({
+      requestedDate:     selectedDate,
+      dishSuggestion:    suggestion,
+      dietaryPreference: diet,
+      spiceLevel:        spice,
+    }));
+  };
+
+  const handleReset = () => {
+    dispatch(resetDishRequest());
+    setSuggestion("");
+    setDiet("Both");
+    setSpice("Normal");
+    setSelectedDate(DATE_OPTIONS[0].value);
   };
 
   /* ── Success State ── */
-  if (success) return (
-    <div className="min-h-screen bg-[#fdfcfa] flex items-center justify-center">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-gray-100 p-12 flex flex-col items-center text-center">
-        <div className="w-20 h-20 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mb-6">
-          <CheckCircle2 size={36} className="text-green-500" strokeWidth={1.75} />
+  if (success)
+    return (
+      <div className="min-h-screen bg-[#fdfcfa] flex items-center justify-center">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-gray-100 p-12 flex flex-col items-center text-center">
+          <div className="w-20 h-20 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mb-6">
+            <CheckCircle2 size={36} className="text-green-500" strokeWidth={1.75} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Sent!</h2>
+          <p className="text-gray-400 text-sm leading-relaxed mb-8">
+            Your chefs have been notified. We'll do our best to serve your suggestion on the selected day.
+          </p>
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3.5 rounded-2xl shadow-lg shadow-orange-200 transition-colors"
+          >
+            <RotateCcw size={15} strokeWidth={2} />
+            Make Another Request
+          </button>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Sent!</h2>
-        <p className="text-gray-400 text-sm leading-relaxed mb-8">
-          Your chefs have been notified. We'll do our best to serve your suggestion on the selected day.
-        </p>
-        <button
-          onClick={() => { setSuccess(false); setSuggestion(""); setDiet("Both"); setSpice("Normal"); setSelectedDate(DATE_OPTIONS[0].value); }}
-          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3.5 rounded-2xl shadow-lg shadow-orange-200 transition-colors"
-        >
-          <RotateCcw size={15} strokeWidth={2} />
-          Make Another Request
-        </button>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="min-h-screen bg-[#fdfcfa] flex items-start justify-center py-10 px-6">
-      {/* ── Outer shell ── */}
       <div className="w-full max-w-7xl">
 
         {/* ── Header ── */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 leading-tight">Request a Dish</h1>
-      </div>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 leading-tight">Request a Dish</h1>
+        </div>
+
         {/* ── Two-column layout ── */}
         <div className="grid grid-cols-5 gap-8">
 
           {/* LEFT — Hero panel */}
           <div className="col-span-2 flex flex-col gap-6">
-            {/* Banner */}
             <div className="bg-orange-500 rounded-3xl p-7 relative overflow-hidden shadow-xl shadow-orange-200">
-              {/* decorative rings */}
               <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/10" />
               <div className="absolute -bottom-10 -right-4 w-24 h-24 rounded-full bg-white/10" />
-
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center mb-5">
                   <Utensils size={22} className="text-white" strokeWidth={1.75} />
@@ -141,7 +145,6 @@ export default function RequestDishPanel() {
               </div>
             </div>
 
-            {/* Info card */}
             <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm space-y-4">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-300">How it works</p>
               {[

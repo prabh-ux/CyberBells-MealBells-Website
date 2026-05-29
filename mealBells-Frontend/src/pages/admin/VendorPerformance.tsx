@@ -9,7 +9,7 @@ import calanderIcon from "../../assets/calanderIcon.png";
 import starFull     from "../../assets/starFull.png";
 import starHalf     from "../../assets/starHalf.png";
 import donutImg     from "../../assets/donutImg.png";
-import linkArrow    from "../../assets/linkArrow.png";
+import linkArrow    from "../../assets/linkarrow.png";
 
 import DropDown from "../../components/shared/DropDown";
 import { PERIODS } from "../../data/adminData";

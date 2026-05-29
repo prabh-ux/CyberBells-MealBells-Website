@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import searchIcon from "../../../assets/searchIcon.png";
-import filterIcon from "../../../assets/filterIcon.png";
+import filterIcon from "../../../assets/FilterIcon.png";
 import actionBtns from "../../../assets/actionBtns.png";
 
 const ALL_STATUSES = ["All", "Success", "Pending", "Critical"];

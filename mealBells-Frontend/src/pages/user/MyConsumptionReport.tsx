@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchConsumptionStats,
+  fetchReviewSummary,
+} from "../../slices/userSlice";
+import type { AppDispatch, RootState } from "../../app/store";
+import type { ConsumptionPeriod } from "../../slices/userSlice";
 import {
   Utensils,
   CalendarCheck,
@@ -9,52 +15,22 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const backendUrl = import.meta.env.VITE_BACKEND;
-
 type Period = "Week" | "Month" | "Year";
 
-interface ChartBar {
-  day: string;
-  meals: number;
-}
-
-interface StatsData {
-  period: string;
-  daysAttended: number;
-  daysSkipped: number;
-  totalMeals: number;
-  mostEaten: string;
-  currentStreak: number;
-  chartData: ChartBar[];
-}
-
-interface ReviewSummary {
-  totalReviews: number;
-  avgRating: number;
-}
-
-function BarChart({ data, max }: { data: ChartBar[]; max: number }) {
+function BarChart({ data, max }: { data: { day: string; meals: number }[]; max: number }) {
   return (
     <div className="flex items-end gap-2 h-28">
       {data.map((d) => {
         const pct = max > 0 ? (d.meals / max) * 100 : 0;
         return (
-          <div
-            key={d.day}
-            className="flex-1 flex flex-col items-center gap-1.5"
-          >
-            <div
-              className="w-full flex flex-col justify-end"
-              style={{ height: "80px" }}
-            >
+          <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5">
+            <div className="w-full flex flex-col justify-end" style={{ height: "80px" }}>
               <div
                 className="w-full rounded-t-lg bg-orange-500 transition-all duration-500 min-h-[4px]"
                 style={{ height: `${Math.max(pct, 4)}%` }}
               />
             </div>
-            <span className="text-[10px] text-gray-400 font-medium">
-              {d.day}
-            </span>
+            <span className="text-[10px] text-gray-400 font-medium">{d.day}</span>
           </div>
         );
       })}
@@ -63,47 +39,26 @@ function BarChart({ data, max }: { data: ChartBar[]; max: number }) {
 }
 
 export default function MyConsumptionReport() {
+  const dispatch = useDispatch<AppDispatch>();
   const [period, setPeriod] = useState<Period>("Week");
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [reviews, setReviews] = useState<ReviewSummary | null>(null);
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [loadingReviews, setLoadingReviews] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const {
+    consumptionStats:        stats,
+    loadingConsumptionStats: loadingStats,
+    consumptionStatsError:   statsError,
+    reviewSummary:           reviews,
+    loadingReviewSummary:    loadingReviews,
+  } = useSelector((state: RootState) => state.user);
 
   // Fetch stats whenever period changes
   useEffect(() => {
-    setLoadingStats(true);
-    axios
-      .get(`${backendUrl}/user/consumption-stats`, {
-        params: { period: period.toLowerCase() },
-        withCredentials: true,
-      })
-      .then((res) => {
-        if (res.data.success) setStats(res.data.data);
-        else setError(res.data.msg ?? "Failed to load stats.");
-      })
-      .catch((e) => setError(e?.response?.data?.msg ?? "Failed to load stats."))
-      .finally(() => setLoadingStats(false));
-  }, [period]);
+    dispatch(fetchConsumptionStats(period.toLowerCase() as ConsumptionPeriod));
+  }, [dispatch, period]);
 
-  // Fetch review summary once
+  // Fetch review summary once on mount
   useEffect(() => {
-    axios
-      .get(`${backendUrl}/user/reviews`, {
-        params: { page: 1, limit: 1 },
-        withCredentials: true,
-      })
-      .then((res) => {
-        if (res.data.success) {
-          setReviews({
-            totalReviews: res.data.data.totalReviews,
-            avgRating: res.data.data.avgRating,
-          });
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingReviews(false));
-  }, []);
+    dispatch(fetchReviewSummary());
+  }, [dispatch]);
 
   const loading = loadingStats || loadingReviews;
 
@@ -116,21 +71,17 @@ export default function MyConsumptionReport() {
     );
 
   // ── Error ──
-  if (error || !stats)
+  if (statsError || !stats)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F6F3] gap-3 px-8 text-center">
-        <p className="text-sm text-gray-400">
-          {error ?? "Could not load report."}
-        </p>
+        <p className="text-sm text-gray-400">{statsError ?? "Could not load report."}</p>
       </div>
     );
 
   const maxVal = Math.max(...stats.chartData.map((d) => d.meals), 1);
   const attendanceRate =
     stats.daysAttended + stats.daysSkipped > 0
-      ? Math.round(
-          (stats.daysAttended / (stats.daysAttended + stats.daysSkipped)) * 100,
-        )
+      ? Math.round((stats.daysAttended / (stats.daysAttended + stats.daysSkipped)) * 100)
       : 0;
 
   const periodLabel =
@@ -158,20 +109,11 @@ export default function MyConsumptionReport() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-0.5">
-                    {period === "Week"
-                      ? "Weekly"
-                      : period === "Month"
-                        ? "Monthly"
-                        : "Yearly"}{" "}
-                    Trend
+                    {period === "Week" ? "Weekly" : period === "Month" ? "Monthly" : "Yearly"} Trend
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-gray-900">
-                      {stats.totalMeals}
-                    </span>
-                    <span className="text-orange-500 font-bold text-sm">
-                      Meals
-                    </span>
+                    <span className="text-3xl font-bold text-gray-900">{stats.totalMeals}</span>
+                    <span className="text-orange-500 font-bold text-sm">Meals</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">{periodLabel}</p>
                 </div>
@@ -209,12 +151,8 @@ export default function MyConsumptionReport() {
                   <Utensils className="w-5 h-5 text-orange-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.totalMeals}
-                  </p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Total Meals
-                  </p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalMeals}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total Meals</p>
                 </div>
               </div>
 
@@ -223,12 +161,8 @@ export default function MyConsumptionReport() {
                   <CalendarCheck className="w-5 h-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.daysAttended}
-                  </p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Days Attended
-                  </p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.daysAttended}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Days Attended</p>
                 </div>
               </div>
 
@@ -237,12 +171,8 @@ export default function MyConsumptionReport() {
                   <CalendarX className="w-5 h-5 text-red-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.daysSkipped}
-                  </p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Days Skipped
-                  </p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.daysSkipped}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Days Skipped</p>
                 </div>
               </div>
 
@@ -251,12 +181,8 @@ export default function MyConsumptionReport() {
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-gray-900 leading-tight truncate">
-                    {stats.mostEaten}
-                  </p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Most Eaten
-                  </p>
+                  <p className="text-lg font-bold text-gray-900 leading-tight truncate">{stats.mostEaten}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Most Eaten</p>
                 </div>
               </div>
             </div>
@@ -271,9 +197,7 @@ export default function MyConsumptionReport() {
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-3">
                   <Leaf className="w-5 h-5 text-white" />
-                  <span className="text-white font-bold text-sm">
-                    Top 5% Eco-Saver
-                  </span>
+                  <span className="text-white font-bold text-sm">Top 5% Eco-Saver</span>
                 </div>
                 <p className="text-white/80 text-xs leading-relaxed">
                   By eating with us, you've saved{" "}
@@ -291,9 +215,7 @@ export default function MyConsumptionReport() {
                 Attendance Rate
               </p>
               <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-4xl font-bold text-gray-900">
-                  {attendanceRate}%
-                </span>
+                <span className="text-4xl font-bold text-gray-900">{attendanceRate}%</span>
                 <TrendingUp className="w-5 h-5 text-green-500" />
               </div>
               <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -324,14 +246,10 @@ export default function MyConsumptionReport() {
                 <div>
                   <p className="text-3xl font-bold text-gray-900">
                     {stats.currentStreak}{" "}
-                    <span className="text-base font-semibold text-gray-400">
-                      days
-                    </span>
+                    <span className="text-base font-semibold text-gray-400">days</span>
                   </p>
                   <p className="text-xs text-orange-500 font-semibold">
-                    {stats.currentStreak > 0
-                      ? "Keep it up!"
-                      : "Start your streak today!"}
+                    {stats.currentStreak > 0 ? "Keep it up!" : "Start your streak today!"}
                   </p>
                 </div>
               </div>
@@ -341,14 +259,10 @@ export default function MyConsumptionReport() {
             {reviews && (
               <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
-                  {reviews.totalReviews === 1
-                    ? "Your Rating"
-                    : "Your Avg Rating"}
+                  {reviews.totalReviews === 1 ? "Your Rating" : "Your Avg Rating"}
                 </p>
                 <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-4xl font-bold text-gray-900">
-                    {reviews.avgRating}
-                  </span>
+                  <span className="text-4xl font-bold text-gray-900">{reviews.avgRating}</span>
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                 </div>
                 <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -358,9 +272,7 @@ export default function MyConsumptionReport() {
                   />
                 </div>
                 <p className="text-[11px] text-gray-400 mt-2 font-semibold">
-                  {reviews.totalReviews === 1
-                    ? "From your 1 review"
-                    : `From ${reviews.totalReviews} reviews`}
+                  {reviews.totalReviews === 1 ? "From your 1 review" : `From ${reviews.totalReviews} reviews`}
                 </p>
               </div>
             )}

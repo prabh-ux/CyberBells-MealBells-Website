@@ -1,59 +1,26 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
 import { Flame, UtensilsCrossed, Check, X } from "lucide-react";
-
-const backendUrl = import.meta.env.VITE_BACKEND;
-
-interface Dish {
-  name: string;
-  description: string;
-  dishType: string;
-  image: string;
-  estimatedCalories: string;
-  tags: string[];
-}
-
-interface Schedule {
-  scheduleId: string;
-  scheduledDate: string;
-  dish: Dish;
-  myResponse: "yes" | "no" | null;
-}
+import type { AppDispatch, RootState } from "../../app/store";
+import { fetchWeeklyMenu } from "../../slices/userSlice";
 
 export default function WeeklyMenuPanel() {
-  const navigate = useNavigate();
-  const [offset]    = useState(0);
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const navigate  = useNavigate();
+  const dispatch  = useDispatch<AppDispatch>();
 
-  const fetchWeek = async (off: number) => {
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        `${backendUrl}/user/menu-weekly?offset=${off}`,
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        const { schedules: s } = res.data.data;
-        setSchedules(s);
-      }
-    } catch (err: any) {
-      console.error("❌", err?.response?.data);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { weeklyMenu: schedules, loadingWeekly: loading } =
+    useSelector((s: RootState) => s.user);
 
-  useEffect(() => { fetchWeek(offset); }, [offset]);
+  useEffect(() => { dispatch(fetchWeeklyMenu(0)); }, [dispatch]);
 
-  const dayName  = (iso: string) =>
+  const dayName   = (iso: string) =>
     new Date(iso).toLocaleDateString("en-US", { weekday: "long" });
   const shortDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const isToday  = (iso: string) =>
+  const isToday   = (iso: string) =>
     new Date(iso).toDateString() === new Date().toDateString();
-  const isPast   = (iso: string) =>
+  const isPast    = (iso: string) =>
     new Date(iso) < new Date() && !isToday(iso);
 
   return (
@@ -115,8 +82,8 @@ export default function WeeklyMenuPanel() {
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
 
-                  {/* Veg / Non-veg badge */}
-                  <div className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-md ${s.dish?.dishType === "Veg" ? "text-green-500 bg-white" : "text-red-500 bg-white"}`}>
+                  {/* Veg badge */}
+                  <div className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-md bg-white ${s.dish?.dishType === "Veg" ? "text-green-500" : "text-red-500"}`}>
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dish?.dishType === "Veg" ? "bg-green-500" : "bg-red-500"}`} />
                     <span className="text-[10px] font-bold uppercase tracking-wide leading-none">
                       {s.dish?.dishType === "Veg" ? "Vegetarian" : "Non-Vegetarian"}
@@ -126,14 +93,12 @@ export default function WeeklyMenuPanel() {
                   {/* Response badge */}
                   {s.myResponse === "yes" && (
                     <div className="absolute top-3 right-3 bg-orange-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                      Eating
+                      <Check className="w-3 h-3 stroke-[3]" /> Eating
                     </div>
                   )}
                   {s.myResponse === "no" && (
                     <div className="absolute top-3 right-3 bg-gray-800/80 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
-                      <X className="w-3 h-3 stroke-[3]" />
-                      Skipping
+                      <X className="w-3 h-3 stroke-[3]" /> Skipping
                     </div>
                   )}
                 </div>
@@ -149,10 +114,7 @@ export default function WeeklyMenuPanel() {
                       {s.dish?.estimatedCalories}
                     </span>
                     {s.dish?.tags?.slice(0, 2).map((t) => (
-                      <span
-                        key={t}
-                        className="bg-orange-50 text-orange-600 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-orange-100 leading-none"
-                      >
+                      <span key={t} className="bg-orange-50 text-orange-600 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-orange-100 leading-none">
                         {t}
                       </span>
                     ))}

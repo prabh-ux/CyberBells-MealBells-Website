@@ -1,27 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
 import { CalendarDays, UtensilsCrossed, Check, X, Users } from "lucide-react";
-
-const backendUrl = import.meta.env.VITE_BACKEND;
-
-interface Dish {
-  name: string;
-  description: string;
-  dishType: string;
-  image: string;
-  estimatedCalories: string;
-  tags: string[];
-}
-
-interface MenuData {
-  scheduleId: string;
-  scheduledDate: string;
-  dish: Dish;
-  colleaguesEating: number;
-  colleagueAvatars: string[];
-  myResponse: "yes" | "no" | null;
-}
+import type { AppDispatch, RootState } from "../../app/store";
+import { fetchTodayMenu, markAttendance } from "../../slices/userSlice";
 
 function InitialsAvatar({ size = 36 }: { size?: number }) {
   return (
@@ -35,35 +17,19 @@ function InitialsAvatar({ size = 36 }: { size?: number }) {
 }
 
 export default function TodayMenuPanel() {
-  const [data, setData]       = useState<MenuData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [voting, setVoting]   = useState(false);
-  const navigate = useNavigate();
+  const dispatch   = useDispatch<AppDispatch>();
+  const navigate   = useNavigate();
+
+  const { todayMenu: data, loadingToday: loading, voting } =
+    useSelector((s: RootState) => s.user);
 
   useEffect(() => {
-    axios
-      .get(`${backendUrl}/user/menu-today`, { withCredentials: true })
-      .then((res) => { if (res.data.success) setData(res.data.data); })
-      .catch((err: any) => console.error("❌", err?.response?.data))
-      .finally(() => setLoading(false));
-  }, []);
+    dispatch(fetchTodayMenu());
+  }, [dispatch]);
 
-  const markAttendance = async (response: "yes" | "no") => {
+  const handleAttendance = (response: "yes" | "no") => {
     if (!data || voting) return;
-    setVoting(true);
-    try {
-      const res = await axios.post(
-        `${backendUrl}/user/attendance`,
-        { response, scheduleId: data.scheduleId },
-        { withCredentials: true }
-      );
-      if (res.data.success)
-        setData((prev) => prev ? { ...prev, ...res.data.data } : prev);
-    } catch (err: any) {
-      console.error("❌", err?.response?.data);
-    } finally {
-      setVoting(false);
-    }
+    dispatch(markAttendance({ response, scheduleId: data.scheduleId }));
   };
 
   if (loading) {
@@ -84,28 +50,23 @@ export default function TodayMenuPanel() {
   }
 
   const { dish, colleaguesEating, colleagueAvatars, myResponse } = data;
-
-
   const visibleAvatars = colleagueAvatars.slice(0, 3);
   const overflowCount  = Math.max(0, colleaguesEating - visibleAvatars.length);
 
   return (
-    <div className="min-h-screen  p-8 lg:p-10   mx-auto">
+    <div className="min-h-screen p-8 lg:p-10 mx-auto">
 
-    
-   {/* ── Header ── */}
+      {/* ── Header ── */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-900 leading-tight">Today's Menu</h1>
       </div>
+
       <div className="flex flex-col gap-5">
 
         {/* ── Dish Card ── */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-start gap-5">
-
-            {/* Left */}
             <div className="flex-1 min-w-0">
-              {/* Veg / Non-veg badge */}
               <div className="flex items-center gap-2 mb-3">
                 <span className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 ${
                   dish.dishType === "Veg" ? "border-green-500" : "border-red-500"
@@ -121,13 +82,8 @@ export default function TodayMenuPanel() {
                 </span>
               </div>
 
-              <h2 className="text-2xl font-bold text-gray-900 leading-snug mb-2">
-                {dish.name}
-              </h2>
-
-              <p className="text-base text-gray-400 leading-relaxed line-clamp-2 mb-5">
-                {dish.description}
-              </p>
+              <h2 className="text-2xl font-bold text-gray-900 leading-snug mb-2">{dish.name}</h2>
+              <p className="text-base text-gray-400 leading-relaxed line-clamp-2 mb-5">{dish.description}</p>
 
               {/* Avatar stack */}
               <div className="flex items-center gap-3">
@@ -142,8 +98,7 @@ export default function TodayMenuPanel() {
                               style={{ zIndex: 10 - i, marginLeft: i === 0 ? 0 : -10 }}
                             >
                               <img
-                                src={src}
-                                alt=""
+                                src={src} alt=""
                                 className="w-full h-full object-cover"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                               />
@@ -170,7 +125,6 @@ export default function TodayMenuPanel() {
               </div>
             </div>
 
-            {/* Right: dish image */}
             {dish.image ? (
               <div className="w-36 h-36 rounded-2xl overflow-hidden flex-shrink-0">
                 <img src={dish.image} alt={dish.name} className="w-full h-full object-cover" />
@@ -193,7 +147,7 @@ export default function TodayMenuPanel() {
             {/* YES */}
             <button
               disabled={voting}
-              onClick={() => markAttendance("yes")}
+              onClick={() => handleAttendance("yes")}
               className={`py-8 rounded-2xl font-bold text-xl transition-all duration-200 disabled:opacity-60 flex flex-col items-center justify-center gap-3 border-2 ${
                 myResponse === "yes"
                   ? "bg-green-500 border-green-500 text-white shadow-lg shadow-green-200 scale-[0.97]"
@@ -213,7 +167,7 @@ export default function TodayMenuPanel() {
             {/* NO */}
             <button
               disabled={voting}
-              onClick={() => markAttendance("no")}
+              onClick={() => handleAttendance("no")}
               className={`py-8 rounded-2xl font-bold text-xl transition-all duration-200 disabled:opacity-60 flex flex-col items-center justify-center gap-3 border-2 ${
                 myResponse === "no"
                   ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-200 scale-[0.97]"

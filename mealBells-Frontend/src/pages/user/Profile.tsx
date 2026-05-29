@@ -1,25 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import { updateMe, logoutUser } from "../../slices/authSlice";
+import type { AppDispatch, RootState } from "../../app/store";
 import {
   ChevronLeft, ChevronRight, User, Lock, Bell,
   Salad, LogOut, Camera, Eye, EyeOff, Check,
   Save, Loader2,
 } from "lucide-react";
 
-const backendUrl = import.meta.env.VITE_BACKEND;
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Page = "profile" | "edit" | "password" | "notifications" | "dietary";
-
-interface UserProfile {
-  name:       string;
-  email:      string;
-  avatar:     string;
-  phone:      string;
-  department: string;
-}
 
 // ─── Shared sub-page header ───────────────────────────────────────────────────
 function SubHeader({ title, onBack }: { title: string; onBack: () => void }) {
@@ -38,20 +30,27 @@ function SubHeader({ title, onBack }: { title: string; onBack: () => void }) {
 }
 
 // ─── Edit Profile page ────────────────────────────────────────────────────────
-function EditProfilePage({ profile, onBack, onSave }: {
-  profile: UserProfile;
-  onBack: () => void;
-  onSave: (p: UserProfile) => void;
-}) {
-  const [form, setForm]       = useState(profile);
-  const [saving, setSaving]   = useState(false);
+function EditProfilePage({ onBack }: { onBack: () => void }) {
+  const dispatch  = useDispatch<AppDispatch>();
+  const { user, saving, error: sliceError } = useSelector((state: RootState) => state.auth);
+
+  const [form, setForm]       = useState({
+    name:  user?.name  ?? "",
+    email: user?.email ?? "",
+    phone: user?.phone ?? "",
+  });
   const [saved, setSaved]     = useState(false);
-  const [error, setError]     = useState("");
-  const [preview, setPreview] = useState(profile.avatar);
+  const [localError, setLocalError] = useState("");
+  const [preview, setPreview] = useState(user?.avatar ?? "");
   const fileRef               = useRef<HTMLInputElement>(null);
   const selectedFile          = useRef<File | null>(null);
 
-  const set = (k: keyof UserProfile) => (e: ChangeEvent<HTMLInputElement>) =>
+  // Mirror slice error into local error display
+  useEffect(() => {
+    if (sliceError) setLocalError(sliceError);
+  }, [sliceError]);
+
+  const set = (k: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -62,42 +61,22 @@ function EditProfilePage({ profile, onBack, onSave }: {
   };
 
   const handleSave = async () => {
-    setError("");
-    setSaving(true);
-    try {
-      const fd = new FormData();
-      if (form.name  !== profile.name)  fd.append("name",  form.name);
-      if (form.email !== profile.email) fd.append("email", form.email);
-      if (form.phone !== profile.phone) fd.append("phone", form.phone);
-      if (selectedFile.current)         fd.append("avatar", selectedFile.current);
+    setLocalError("");
+    const fd = new FormData();
+    if (form.name  !== user?.name)  fd.append("name",  form.name);
+    if (form.email !== user?.email) fd.append("email", form.email);
+    if (form.phone !== user?.phone) fd.append("phone", form.phone);
+    if (selectedFile.current)       fd.append("avatar", selectedFile.current);
 
-      const res = await axios.put(
-        `${backendUrl}/auth/me/update`,
-        fd,
-        { withCredentials: true, headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      if (res.data.success) {
-        const u = res.data.user;
-        const updated: UserProfile = {
-          name:       u.name       ?? form.name,
-          email:      u.email      ?? form.email,
-          avatar:     u.avatar     ?? preview,
-          phone:      u.phone      ?? form.phone,
-          department: u.department ?? form.department,
-        };
-        onSave(updated);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-      } else {
-        setError(res.data.msg ?? "Failed to save.");
-      }
-    } catch (e: any) {
-      setError(e?.response?.data?.msg ?? "Failed to save.");
-    } finally {
-      setSaving(false);
+    const result = await dispatch(updateMe(fd));
+    if (updateMe.fulfilled.match(result)) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     }
   };
+
+  const avatarSrc = preview
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name || "U")}&background=f97316&color=fff`;
 
   return (
     <div>
@@ -108,7 +87,7 @@ function EditProfilePage({ profile, onBack, onSave }: {
         <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-sm flex flex-col items-center gap-4">
           <div className="relative">
             <img
-              src={preview || `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name)}&background=f97316&color=fff`}
+              src={avatarSrc}
               alt={form.name}
               className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100"
             />
@@ -136,7 +115,7 @@ function EditProfilePage({ profile, onBack, onSave }: {
             { label: "Full Name", key: "name",  type: "text"  },
             { label: "Email",     key: "email", type: "email" },
             { label: "Phone",     key: "phone", type: "tel"   },
-          ] as { label: string; key: keyof UserProfile; type: string }[]).map(({ label, key, type }) => (
+          ] as { label: string; key: keyof typeof form; type: string }[]).map(({ label, key, type }) => (
             <div key={key}>
               <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                 {label}
@@ -149,7 +128,7 @@ function EditProfilePage({ profile, onBack, onSave }: {
               />
             </div>
           ))}
-          {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
+          {localError && <p className="text-xs text-red-500 font-semibold">{localError}</p>}
         </div>
 
         <button
@@ -177,15 +156,15 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState("");
 
   type Field = keyof typeof form;
-  const set    = (k: Field)              => (e: ChangeEvent<HTMLInputElement>) =>
+  const set    = (k: Field) => (e: ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
   const toggle = (k: keyof typeof show) =>
     setShow(s => ({ ...s, [k]: !s[k] }));
 
   const handleSave = () => {
     setError("");
-    if (!form.current)           { setError("Enter your current password."); return; }
-    if (form.next.length < 8)    { setError("New password must be at least 8 characters."); return; }
+    if (!form.current)              { setError("Enter your current password."); return; }
+    if (form.next.length < 8)       { setError("New password must be at least 8 characters."); return; }
     if (form.next !== form.confirm) { setError("Passwords do not match."); return; }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -252,69 +231,43 @@ const MENU_ITEMS: { page: Page; label: string; desc: string; icon: React.FC<{ cl
 ];
 
 export default function Profile() {
-  const navigate = useNavigate();
-  const [page, setPage]       = useState<Page>("profile");
-  const [profile, setProfile] = useState<UserProfile>({
-    name: "", email: "", avatar: "", phone: "", department: "",
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
-
-  useEffect(() => {
-    axios
-      .get(`${backendUrl}/auth/me`, { withCredentials: true })
-      .then(res => {
-        if (res.data.success) {
-          const u = res.data.user;
-          setProfile({
-            name:       u.name       ?? "",
-            email:      u.email      ?? "",
-            avatar:     u.avatar     ?? "",
-            phone:      u.phone      ?? "",
-            department: u.department ?? u.role ?? "",
-          });
-        } else {
-          setError("Failed to load profile.");
-        }
-      })
-      .catch(e => setError(e?.response?.data?.msg ?? "Failed to load profile."))
-      .finally(() => setLoading(false));
-  }, []);
+  const navigate  = useNavigate();
+  const dispatch  = useDispatch<AppDispatch>();
+  const { user, loading, initialized } = useSelector((state: RootState) => state.auth);
+  const [page, setPage] = useState<Page>("profile");
 
   const handleLogout = async () => {
-    await axios.post(`${backendUrl}/auth/logout`, {}, { withCredentials: true });
+    await dispatch(logoutUser());
     navigate("/login");
   };
 
-  // ── Loading ──
-  if (loading) return (
+  // ── Loading — wait until authSlice has resolved fetchMe ──
+  if (!initialized || loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F7F6F3]">
       <div className="w-8 h-8 rounded-full border-[3px] border-orange-100 border-t-orange-500 animate-spin" />
     </div>
   );
 
-  // ── Error ──
-  if (error) return (
+  // ── No session ──
+  if (!user) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F6F3] gap-3">
-      <p className="text-sm text-gray-400">{error}</p>
+      <p className="text-sm text-gray-400">Could not load profile.</p>
       <button onClick={() => navigate("/login")} className="text-sm font-semibold text-orange-500">
         Go to Login
       </button>
     </div>
   );
 
-  const avatarSrc = profile.avatar
-    || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || "U")}&background=f97316&color=fff`;
+  const avatarSrc = user.avatar
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "U")}&background=f97316&color=fff`;
+
+  const department = user.department ?? user.role ?? "";
 
   // ── Sub pages ──
   if (page === "edit") return (
     <div className="min-h-screen bg-[#F7F6F3]">
       <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
-        <EditProfilePage
-          profile={profile}
-          onBack={() => setPage("profile")}
-          onSave={p => { setProfile(p); setPage("profile"); }}
-        />
+        <EditProfilePage onBack={() => setPage("profile")} />
       </div>
     </div>
   );
@@ -327,7 +280,6 @@ export default function Profile() {
     </div>
   );
 
-  // notifications + dietary: keep existing UI, skip real data for now
   if (page === "notifications") return (
     <div className="min-h-screen bg-[#F7F6F3]">
       <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
@@ -367,7 +319,7 @@ export default function Profile() {
               <div className="relative">
                 <img
                   src={avatarSrc}
-                  alt={profile.name}
+                  alt={user.name}
                   className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100"
                 />
                 <button
@@ -379,18 +331,18 @@ export default function Profile() {
                 </button>
               </div>
               <div>
-                <p className="text-xl font-bold text-gray-900">{profile.name}</p>
-                <p className="text-sm text-gray-400 mt-0.5">{profile.email}</p>
+                <p className="text-xl font-bold text-gray-900">{user.name}</p>
+                <p className="text-sm text-gray-400 mt-0.5">{user.email}</p>
               </div>
               <div className="flex gap-2 flex-wrap justify-center mt-1">
-                {profile.department && (
+                {department && (
                   <span className="bg-orange-50 text-orange-600 text-xs font-semibold px-3 py-1 rounded-full border border-orange-100">
-                    {profile.department}
+                    {department}
                   </span>
                 )}
-                {profile.phone && (
+                {user.phone && (
                   <span className="bg-gray-100 text-gray-500 text-xs font-semibold px-3 py-1 rounded-full">
-                    {profile.phone}
+                    {user.phone}
                   </span>
                 )}
               </div>
