@@ -1,6 +1,7 @@
-@import "tailwindcss";
 /* Fonts — Manrope (UI) + Inter (inputs/labels) */
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+@import "tailwindcss";
  @theme {
   --breakpoint-3xl: 2560px;
   --breakpoint-4xl: 3840px;
