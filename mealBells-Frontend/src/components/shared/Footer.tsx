@@ -77,7 +77,7 @@ function Footer() {
         {/* Bottom Row */}
         <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-3 sm:gap-0">
           <p className="text-[var(--text-muted)] text-[clamp(0.7rem,0.8vw,1.1rem)]">
-            © 2024 MealBells Inc. All rights reserved.
+            © 2026 MealBells Inc. All rights reserved.
           </p>
           <div className="flex items-center gap-[clamp(1rem,2vw,3rem)]">
             <a

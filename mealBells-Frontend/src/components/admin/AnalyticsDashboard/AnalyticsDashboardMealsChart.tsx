@@ -15,7 +15,7 @@ function barColor(count: number, max: number) {
 const RoundedBar = (props: any) => {
   const { x, y, width, height, fill } = props;
   if (!height || height <= 0) return null;
-  const radius = 8;
+  const radius = Math.min(8, height); // ← clamp radius to height
   return (
     <path
       d={`M${x + radius},${y} h${width - 2 * radius} a${radius},${radius} 0 0 1 ${radius},${radius} v${height - radius} h-${width} v-${height - radius} a${radius},${radius} 0 0 1 ${radius},-${radius}z`}
@@ -77,7 +77,7 @@ const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, onRangeC
         </ResponsiveContainer>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AnalyticsDashboardMealsChart
+export default AnalyticsDashboardMealsChart;

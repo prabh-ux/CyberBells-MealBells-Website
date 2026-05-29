@@ -10,12 +10,12 @@ const Landing = () => {
   return (
     <div className="bg-[#F9F9F9]">
       <Hero />
-      <FeaturesSection />
-      <SolutionsSection />
+      <div id="features"><FeaturesSection /></div>
+      <div id="solutions"><SolutionsSection /></div>
       <StatsBanner />
-      <PricingSection/>
-      <TestimonialsSection/>
-      <CTASection/>
+      <div id="pricing"><PricingSection /></div>
+      <div id="success-stories"><TestimonialsSection /></div>
+      <CTASection />
     </div>
   );
 };

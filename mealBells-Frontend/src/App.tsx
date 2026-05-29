@@ -34,7 +34,9 @@ import DeliveryStatus from "./pages/user/DeliveryStatus";
 import MyConsumptionReport from "./pages/user/MyConsumptionReport";
 import Profile from "./pages/user/Profile";
 import Notifications from "./pages/user/Notifications";
-import Login from "./pages/auth/login";
+import Login from "./pages/auth/Login";
+import AdminNotifications from "./pages/admin/AdminNotifications";
+
 
 
 function App() {
@@ -125,6 +127,7 @@ function App() {
                 element={<ConsumptionAnalytics />}
               />
               <Route path="/admin/settings" element={<Settings />} />
+              <Route path="/admin/notifications" element={<AdminNotifications/>} />
             </Route>
 
             {/* User */}

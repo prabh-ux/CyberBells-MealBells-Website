@@ -6,7 +6,13 @@ import { logoutUser } from "../../slices/authSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 
 function Header() {
-  const links = ["Features", "Solutions", "Pricing", "Success Stories"];
+  const links = [
+    { label: "Features", id: "features" },
+    { label: "Solutions", id: "solutions" },
+    { label: "Pricing", id: "pricing" },
+    { label: "Success Stories", id: "success-stories" },
+  ];
+
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -18,6 +24,18 @@ function Header() {
     await dispatch(logoutUser());
     setMenuOpen(false);
     navigate("/login");
+  };
+
+  const scrollToSection = (id: string) => {
+    if (window.location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } else {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    }
+    setMenuOpen(false);
   };
 
   useEffect(() => {
@@ -63,10 +81,11 @@ function Header() {
           {links.map((item, index) => (
             <button
               key={index}
+              onClick={() => scrollToSection(item.id)}
               style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
               className="font-semibold text-[clamp(0.875rem,1vw,2rem)] hover:text-gray-900 transition-colors"
             >
-              {item}
+              {item.label}
             </button>
           ))}
         </nav>
@@ -138,11 +157,11 @@ function Header() {
           {links.map((item, index) => (
             <button
               key={index}
-              onClick={() => setMenuOpen(false)}
+              onClick={() => scrollToSection(item.id)}
               style={{ fontFamily: "var(--font-inter)", color: "var(--text-primary)" }}
               className="text-left text-[15px] font-semibold py-3 px-2 rounded-lg hover:bg-orange-50 hover:text-orange-500 transition-colors"
             >
-              {item}
+              {item.label}
             </button>
           ))}
         </nav>

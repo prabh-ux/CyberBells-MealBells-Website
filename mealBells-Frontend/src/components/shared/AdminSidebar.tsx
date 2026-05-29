@@ -24,7 +24,6 @@ const navItems = [
   { label: "Consumption Report",   path: "/admin/consumption-analytics-report", icon: reportsIcon },
   { label: "Food Wastage Report",  path: "/admin/food-wastage-report",          icon: reportsIcon },
   { label: "Menu Overview",        path: "/admin/menu-overview",                icon: menuOverviewIcon },
-  { label: "Menu Management",      path: "/admin/menu-management",              icon: menuOverviewIcon },
 ];
 
 const bottomItems = [
@@ -54,6 +53,11 @@ export default function AdminSidebar() {
         return location.pathname === "/admin/users" || location.pathname === "/admin/add-user";
       case "/admin/vendors":
         return location.pathname === "/admin/vendors" || location.pathname === "/admin/add-vendor";
+      case "/admin/menu-overview":
+        return (
+          location.pathname === "/admin/menu-overview" ||
+          location.pathname.startsWith("/admin/menu-management")
+        );
       default:
         return location.pathname === path;
     }

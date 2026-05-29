@@ -8,14 +8,14 @@ const Hero = () => {
         {/* Left Content */}
         <div className="flex flex-col gap-[clamp(1.25rem,2vw,3.5rem)] w-full lg:max-w-[50%] text-center lg:text-left items-center lg:items-start">
 
-          {/* Heading */}
-          <h1 className="font-[var(--font-manrope)] text-[var(--text-primary)] text-[clamp(2.25rem,5vw,12rem)] font-normal leading-tight">
-            Smart Meal <br />
-            Management for <br />
-            <span className="font-[var(--font-manrope)] text-[var(--brand)]">
-              Smart Offices
-            </span>
-          </h1>
+     {/* Heading */}
+<h1 className="font-[var(--font-manrope)] text-[var(--text-primary)] text-[clamp(2.25rem,5vw,12rem)] font-normal leading-[1.1]">
+  Smart Meal <br />
+  Management for <br />
+  <span className="font-[var(--font-manrope)] text-[var(--brand)]">
+    Smart Offices
+  </span>
+</h1>
 
           <p className="font-[var(--font-inter)] text-[var(--text-primary)] text-[clamp(0.875rem,1.4vw,3rem)] leading-relaxed max-w-md lg:max-w-none">
             Revolutionize your office catering with automated tiffin counts, real-time

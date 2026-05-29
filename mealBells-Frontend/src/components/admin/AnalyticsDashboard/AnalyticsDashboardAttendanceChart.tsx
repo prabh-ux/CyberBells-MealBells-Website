@@ -18,7 +18,7 @@ const AttendanceTooltipContent = ({ active, payload, label }: any) => {
 const RoundedStackedBar = (props: any) => {
   const { x, y, width, height, fill, isTop } = props;
   if (!height || height <= 0) return null;
-  const r = isTop ? 8 : 0;
+  const r = isTop ? Math.min(8, height) : 0; // ← clamp radius to height
   return (
     <path
       d={`M${x + r},${y} h${width - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${height - r} h-${width} v-${height - r} a${r},${r} 0 0 1 ${r},-${r}z`}
@@ -65,7 +65,7 @@ const AnalyticsDashboardAttendanceChart = ({ attendanceData }: Props) => {
         </ResponsiveContainer>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AnalyticsDashboardAttendanceChart
+export default AnalyticsDashboardAttendanceChart;

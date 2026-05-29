@@ -1,36 +1,46 @@
-import React, { useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
-import searchIcon from '../../assets/searchIcon.png'
-import bellIcon   from '../../assets/bellIcon.png'
-import helpIcon   from '../../assets/helpIcon.png'
-import { fetchMe } from '../../slices/authSlice'
-import type { AppDispatch, RootState } from '../../app/store'
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useLocation } from "react-router-dom";
+import searchIcon from "../../assets/searchIcon.png";
+import bellIcon from "../../assets/bellIcon.png";
+import helpIcon from "../../assets/helpIcon.png";
+import { fetchMe } from "../../slices/authSlice";
+import type { AppDispatch, RootState } from "../../app/store";
 
 const AdminHeader = () => {
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  const navigate  = useNavigate()
-  const dispatch  = useDispatch<AppDispatch>()
-  const { user }  = useSelector((s: RootState) => s.auth)
-console.log(user);
-  // fetch only if not already loaded
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((s: RootState) => s.auth);
+
+  const isNotifications = location.pathname === "/admin/notifications";
+  const isProfile       = location.pathname === "/admin/profile";
+
   React.useEffect(() => {
-    if (!user) dispatch(fetchMe())
-      
-  }, [])
+    if (!user) dispatch(fetchMe());
+  }, []);
 
-  const avatarSrc = user?.avatar || null
-  const initials  = user?.name?.[0]?.toUpperCase() ?? "A"
+  const avatarSrc = user?.avatar || null;
+  const initials  = user?.name?.[0]?.toUpperCase() ?? "A";
 
-  const Avatar = () => avatarSrc
-    ? <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover" />
-    : <div className="w-full h-full bg-[#FFF4EC] flex items-center justify-center text-sm font-bold text-[#FA7000]">{initials}</div>
+  const Avatar = () =>
+    avatarSrc ? (
+      <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover" />
+    ) : (
+      <div className="w-full h-full bg-[#FFF4EC] flex items-center justify-center text-sm font-bold text-[#FA7000]">
+        {initials}
+      </div>
+    );
 
   return (
     <header className="w-full h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white font-[var(--font-inter)]">
 
       {/* Brand */}
-      <button onClick={() => navigate('/')} className="font-[var(--font-manrope)] text-[#EA580C] font-bold text-lg tracking-tight shrink-0">
+      <button
+        onClick={() => navigate("/")}
+        className="font-[var(--font-manrope)] text-[#EA580C] font-bold text-lg tracking-tight shrink-0"
+      >
         <span className="sm:hidden">MB Admin</span>
         <span className="hidden sm:inline">MealBells Admin</span>
       </button>
@@ -39,9 +49,16 @@ console.log(user);
       {mobileSearchOpen && (
         <div className="absolute left-0 top-0 w-full h-14 bg-white px-4 flex items-center gap-3 z-10 border-b border-gray-200 sm:hidden">
           <img src={searchIcon} alt="search" className="w-4 h-4 shrink-0" />
-          <input autoFocus type="text" placeholder="Search resources..."
-            className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[#6B7280] outline-none" />
-          <button onClick={() => setMobileSearchOpen(false)} className="text-[#6B7280] text-sm font-medium">
+          <input
+            autoFocus
+            type="text"
+            placeholder="Search resources..."
+            className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[#6B7280] outline-none"
+          />
+          <button
+            onClick={() => setMobileSearchOpen(false)}
+            className="text-[#6B7280] text-sm font-medium"
+          >
             Cancel
           </button>
         </div>
@@ -53,35 +70,63 @@ console.log(user);
         {/* Search — sm+ */}
         <div className="hidden sm:flex items-center gap-2 bg-[#EEEEEE] rounded-xl px-3 py-1.5">
           <img src={searchIcon} alt="search" className="w-4 h-4 shrink-0" />
-          <input type="text" placeholder="Search resources..."
-            className="bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[#6B7280] outline-none w-48" />
+          <input
+            type="text"
+            placeholder="Search resources..."
+            className="bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[#6B7280] outline-none w-48"
+          />
         </div>
 
         {/* Search toggle — mobile */}
-        <button type="button" onClick={() => setMobileSearchOpen(true)}
-          className="sm:hidden w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+        <button
+          type="button"
+          onClick={() => setMobileSearchOpen(true)}
+          className="sm:hidden w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+        >
           <img src={searchIcon} alt="search" className="w-5 h-5 object-contain" />
         </button>
 
         {/* Bell */}
-        <button type="button" className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-          <img src={bellIcon} alt="notifications" className="w-5 h-5 object-contain" />
+        <button
+          type="button"
+          onClick={() => navigate("/admin/notifications")}
+          className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
+            isNotifications
+              ? "bg-orange-100 ring-2 ring-orange-400"
+              : "hover:bg-gray-100"
+          }`}
+        >
+          <img
+            src={bellIcon}
+            alt="notifications"
+            className={`w-5 h-5 object-contain ${isNotifications ? "opacity-100" : "opacity-70"}`}
+          />
         </button>
 
         {/* Help */}
-        <button type="button" className="hidden sm:flex w-9 h-9 items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+        <button
+          type="button"
+          className="hidden sm:flex w-9 h-9 items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+        >
           <img src={helpIcon} alt="help" className="w-5 h-5 object-contain" />
         </button>
 
-        {/* Avatar — real or initial fallback */}
-        <button type="button" onClick={() => navigate('/admin/profile')}
-          className="w-9 h-9 rounded-full overflow-hidden border border-gray-200 shrink-0 hover:ring-2 hover:ring-orange-400 transition-all">
+        {/* Avatar */}
+        <button
+          type="button"
+          onClick={() => navigate("/admin/profile")}
+          className={`w-9 h-9 rounded-full overflow-hidden border transition-all shrink-0 ${
+            isProfile
+              ? "border-orange-400 ring-2 ring-orange-400"
+              : "border-gray-200 hover:ring-2 hover:ring-orange-400"
+          }`}
+        >
           <Avatar />
         </button>
 
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default AdminHeader
+export default AdminHeader;
