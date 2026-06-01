@@ -71,6 +71,7 @@ const userSchema = new Schema(
     vendorId: {
       type:    String,
       default: null,    // ← null so sparse index ignores non-vendors
+      sparse:  true, 
      
     },
     capacity: {
