@@ -19,13 +19,13 @@ import TrendChip from "../../components/admin/VendorPerformance/TrendChip";
 import ChartTooltip from "../../components/admin/VendorPerformance/ChartTooltip";
 import StarRating from "../../components/admin/VendorPerformance/StarRating";
 import StatusBadge from "../../components/admin/VendorPerformance/StatusBadge";
-import { fetchVendors } from "../../slices/vendorSlice";
+import { fetchVendors } from "../../slices/adminSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 import type { TimeSlotKey } from "../../types/admin";
 
 const VendorPerformance = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { list: vendors } = useSelector((s: RootState) => s.vendors);
+  const {  vendors } = useSelector((s: RootState) => s.admin);
 
   const [vendor, setVendor]           = useState("All Vendors");
   const [period, setPeriod]           = useState<TimeSlotKey>("Full Time");

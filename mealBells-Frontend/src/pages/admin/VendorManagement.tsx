@@ -5,7 +5,7 @@ import type { AppDispatch, RootState } from "../../app/store";
 import {
   fetchVendors, toggleVendorStatus, updateVendor,
   optimisticToggleVendor, revertToggleVendor,
-} from "../../slices/vendorSlice";
+} from "../../slices/adminSlice";
 import toast from "react-hot-toast";
 import { Plus } from "lucide-react";
 
@@ -22,8 +22,7 @@ export default function VendorManagement() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { list: vendors, loading, error, updating } = useSelector((s: RootState) => s.vendors);
-
+const { vendors, vendorsLoading, vendorError, vendorUpdating } = useSelector((s: RootState) => s.admin);
   const [search,       setSearch]       = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [ratingFilter, setRatingFilter] = useState("All Ratings");
@@ -36,16 +35,16 @@ export default function VendorManagement() {
   // Close modal + toast after update
   const prevUpdating = useRef(false);
   useEffect(() => {
-    if (prevUpdating.current && !updating) {
-      if (!error) {
+    if (prevUpdating.current && !vendorUpdating) {
+      if (!vendorError) {
         toast.success("Vendor updated successfully!");
         setEditModal(null);
       } else {
-        toast.error(error);
+        toast.error(vendorError);
       }
     }
-    prevUpdating.current = updating;
-  }, [updating, error]);
+    prevUpdating.current = vendorUpdating;
+  }, [vendorUpdating, vendorError]);
 
   // ── Toggle ─────────────────────────────────────────────────────────────────
   const handleToggleStatus = async (id: string) => {
@@ -108,7 +107,7 @@ export default function VendorManagement() {
   const handleRatingChange = (val: string) => { setRatingFilter(val); setPage(1); };
 
   // ── Loading / error states ─────────────────────────────────────────────────
-  if (loading) {
+  if (vendorsLoading) {
     return (
       <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center">
         <p className="text-sm text-gray-400 animate-pulse">Loading vendors…</p>
@@ -116,11 +115,11 @@ export default function VendorManagement() {
     );
   }
 
-  if (error && !vendors.length) {
+  if (vendorError && !vendors.length) {
     return (
       <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center">
         <div className="bg-white rounded-xl border border-red-200 shadow-sm p-6 text-center max-w-sm">
-          <p className="text-red-500 text-sm font-medium mb-3">{error}</p>
+          <p className="text-red-500 text-sm font-medium mb-3">{vendorError}</p>
           <button
             onClick={() => dispatch(fetchVendors())}
             className="text-xs px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"

@@ -7,7 +7,7 @@ import {
   addDishWithSchedule, updateDish,
   fetchDishById, resetDishState, clearEditingDish,
 } from '../../slices/dishSlice'
-import { fetchVendors } from '../../slices/vendorSlice'
+import { fetchVendors } from '../../slices/adminSlice'
 import toast            from 'react-hot-toast'
 
 import cutleryIcon      from '../../assets/cutlerryGray.png'
@@ -61,7 +61,7 @@ const AddEditDish = () => {
   const isEdit    = Boolean(id)
 
   const { saving, error, editingDish, loadingOne } = useSelector((s: RootState) => s.dishes)
-  const { list: vendorList }                       = useSelector((s: RootState) => s.vendors)
+  const {  vendors }                       = useSelector((s: RootState) => s.admin)
 
   const [form,        setForm]        = useState<FormState>(EMPTY_FORM)
   const [stats,       setStats]       = useState<StatState>(DEFAULT_STATS)
@@ -74,8 +74,8 @@ const AddEditDish = () => {
 
   // ── fetch vendors ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!vendorList.length) dispatch(fetchVendors())
-  }, [dispatch, vendorList.length])
+    if (!vendors.length) dispatch(fetchVendors())
+  }, [dispatch, vendors.length])
 
   // ── if edit mode, fetch dish ──────────────────────────────────────────────
   useEffect(() => {
@@ -187,7 +187,7 @@ const AddEditDish = () => {
 
     setFieldErrors({})
 
-    const selectedVendorId = vendorList.find(v => v.name === form.vendor)?._id
+    const selectedVendorId = vendors.find(v => v.name === form.vendor)?._id
       ?? editingDish?.vendorId   // fallback to existing vendorId in edit mode
       ?? ''
 
@@ -211,7 +211,7 @@ const AddEditDish = () => {
     }
   }
 
-  const vendorNames = ['All Vendors', ...vendorList.map(v => v.name)]
+  const vendorNames = ['All Vendors', ...vendors.map(v => v.name)]
 
   // ── loading skeleton for edit mode ────────────────────────────────────────
   if (isEdit && loadingOne) {

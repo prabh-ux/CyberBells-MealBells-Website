@@ -2,6 +2,20 @@ import { dishModel }    from "../Models/dish.js";
 import { userModel }    from "../Models/user.js";
 import { MenuSchedule } from "../Models/menuSchedule.js";
 
+// ── Shared: core field update for a dish document ─────────────────────────────
+export const applyDishUpdates = async (dishId, body, file) => {
+  const fields = [
+    "name", "dishType", "description", "ingredients",
+    "estimatedCalories", "tags", "protein", "carbs",
+    "availability", "qualityScore", "prepTime",
+  ];
+  const updates = {};
+  fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
+  if (file?.path) updates.image = file.path;
+
+  return dishModel.findByIdAndUpdate(dishId, { $set: updates }, { new: true }).lean();
+};
+
 // ── POST /admin/dishes/add ────────────────────────────────────────────────────
 export const addDish = async (req, res) => {
   try {
@@ -115,48 +129,24 @@ export const getDishById = async (req, res) => {
 // ── PUT /admin/dishes/:id/update ──────────────────────────────────────────────
 export const updateDish = async (req, res) => {
   try {
-    const {
-      name, dishType, description, ingredients,
-      vendor, availability,
-      qualityScore, estimatedCalories, prepTime,
-      scheduledDate,
-    } = req.body;
-
     const existing = await dishModel.findById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, msg: "Dish not found" });
 
-    let vendorId = existing.vendor;
-    if (vendor !== undefined) {
-      if (!vendor || vendor === "All Vendors") {
-        vendorId = null;
+    // resolve vendor change if provided
+    if (req.body.vendor !== undefined) {
+      if (!req.body.vendor || req.body.vendor === "All Vendors") {
+        req.body.vendor = null;
       } else {
-        const found = await userModel.findOne({ _id: vendor, type: "vendor" });
+        const found = await userModel.findOne({ _id: req.body.vendor, type: "vendor" });
         if (!found) return res.status(404).json({ success: false, msg: "Vendor not found" });
-        vendorId = found._id;
+        req.body.vendor = found._id;
       }
     }
 
-    const updated = await dishModel.findByIdAndUpdate(
-      req.params.id,
-      {
-        name:              name?.trim()      || existing.name,
-        dishType:          dishType          ?? existing.dishType,
-        description:       description       ?? existing.description,
-        ingredients:       ingredients       ?? existing.ingredients,
-        image:             req.file?.path    ?? existing.image,
-        vendor:            vendorId,
-        availability:      availability      ?? existing.availability,
-        qualityScore:      qualityScore      ?? existing.qualityScore,
-        estimatedCalories: estimatedCalories ?? existing.estimatedCalories,
-        prepTime:          prepTime          ?? existing.prepTime,
-      },
-      { new: true }
-    ).populate("vendor", "name email");
-
-    let schedule = null;
-    if (scheduledDate) {
-      const dayStart = new Date(scheduledDate); dayStart.setHours(0, 0, 0, 0);
-      const dayEnd   = new Date(scheduledDate); dayEnd.setHours(23, 59, 59, 999);
+    // handle schedule conflict if scheduledDate provided
+    if (req.body.scheduledDate) {
+      const dayStart = new Date(req.body.scheduledDate); dayStart.setHours(0, 0, 0, 0);
+      const dayEnd   = new Date(req.body.scheduledDate); dayEnd.setHours(23, 59, 59, 999);
 
       const conflict = await MenuSchedule.findOne({
         scheduledDate: { $gte: dayStart, $lte: dayEnd },
@@ -164,22 +154,30 @@ export const updateDish = async (req, res) => {
       });
 
       if (conflict) {
+        const updated = await applyDishUpdates(req.params.id, req.body, req.file);
+        const populated = await dishModel.findById(updated._id).populate("vendor", "name email");
         return res.status(409).json({
           success:       false,
           msg:           "Dish updated but another dish is already scheduled on this date",
-          dish:          updated,
+          dish:          populated,
           scheduleError: true,
         });
       }
 
-      schedule = await MenuSchedule.findOneAndUpdate(
+      await MenuSchedule.findOneAndUpdate(
         { dish: req.params.id },
-        { dish: req.params.id, scheduledDate: new Date(scheduledDate), scheduledBy: req.user.id },
+        {
+          dish:          req.params.id,
+          scheduledDate: new Date(req.body.scheduledDate),
+          scheduledBy:   req.user.id,
+        },
         { upsert: true, new: true }
       );
     }
 
-    return res.status(200).json({ success: true, msg: "Dish updated successfully", dish: updated, schedule });
+    const updated   = await applyDishUpdates(req.params.id, req.body, req.file);
+    const populated = await dishModel.findById(updated._id).populate("vendor", "name email");
+    return res.status(200).json({ success: true, msg: "Dish updated successfully", dish: populated });
   } catch (err) {
     console.error("Update dish error:", err);
     return res.status(500).json({ success: false, msg: "Internal error: " + err.message });
@@ -211,7 +209,6 @@ export const getSchedules = async (req, res) => {
       })
       .sort({ scheduledDate: -1 });
 
-    // drop any schedule whose dish ref is broken (deleted dish)
     const valid = schedules.filter(s => s.dish != null);
 
     return res.status(200).json({ success: true, schedules: valid });

@@ -9,7 +9,7 @@ import AddNewCard from "../../components/admin/MenuOverview/AddNewCard";
 
 import type { MenuItem, PeriodKey }    from "../../types/admin";
 import { PERIODS, TABS }               from "../../data/adminData";
-import { fetchVendors }                from "../../slices/vendorSlice";
+import { fetchVendors }                from "../../slices/adminSlice";
 import { fetchSchedules }              from "../../slices/dishSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 
@@ -39,7 +39,7 @@ const MenuOverview = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   const { schedules, loading, error } = useSelector((s: RootState) => s.dishes);
-  const { list: vendors }             = useSelector((s: RootState) => s.vendors);
+  const {  vendors }             = useSelector((s: RootState) => s.admin);
 
   const [activeTab, setActiveTab] = useState("Both");
   const [vendor,    setVendor]    = useState("All Vendors");

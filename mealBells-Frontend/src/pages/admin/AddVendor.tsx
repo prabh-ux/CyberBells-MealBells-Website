@@ -2,12 +2,12 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../app/store";
-import { addVendor, resetVendorState } from "../../slices/vendorSlice";
+import { addVendor, resetVendorState, clearNewVendorCredentials } from "../../slices/adminSlice";
 import toast from "react-hot-toast";
 import {
   User, Mail, Phone, Save, Clock, List,
   ShieldCheck, TrendingUp, UploadCloud,
-  CheckCircle, Loader2,
+  CheckCircle, Loader2, Copy, Eye, EyeOff, ArrowRight,
 } from "lucide-react";
 import TimeDropdown, { EMPTY_TIME, fmtTime, timeToMins, type TimeValue } from "../../components/shared/Timedropdown";
 
@@ -45,11 +45,114 @@ const Field = ({
 
 const inputCls = "w-full ml-3 outline-none text-sm bg-transparent text-gray-700 placeholder:text-gray-400";
 
+// ── Credentials Modal ─────────────────────────────────────────────────────────
+function CredentialsModal({
+  name, email, password, onDone,
+}: {
+  name: string; email: string; password: string; onDone: () => void;
+}) {
+  const [showPass, setShowPass]     = useState(false);
+  const [copiedEmail, setCopiedEmail]   = useState(false);
+  const [copiedPass, setCopiedPass]   = useState(false);
+
+  const copy = (text: string, type: "email" | "pass") => {
+    navigator.clipboard.writeText(text);
+    if (type === "email") { setCopiedEmail(true); setTimeout(() => setCopiedEmail(false), 2000); }
+    else                  { setCopiedPass(true);  setTimeout(() => setCopiedPass(false),  2000); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-200">
+
+        {/* Icon + Title */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+            <CheckCircle size={28} className="text-emerald-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Vendor Created!</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Share these login credentials with <span className="font-semibold text-gray-700">{name}</span>.
+            <br />
+            <span className="text-red-500 font-semibold">This password won't be shown again.</span>
+          </p>
+        </div>
+
+        {/* Credentials */}
+        <div className="space-y-3 mb-6">
+          {/* Email */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Email</p>
+              <p className="text-sm font-semibold text-gray-800 truncate">{email}</p>
+            </div>
+            <button
+              onClick={() => copy(email, "email")}
+              className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-orange-400 hover:text-orange-500 transition-colors"
+            >
+              <Copy size={13} />
+              {copiedEmail ? "Copied!" : "Copy"}
+            </button>
+          </div>
+
+          {/* Password */}
+          <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-0.5">Temp Password</p>
+              <p className="text-sm font-semibold text-gray-800 font-mono tracking-wider">
+                {showPass ? password : "•".repeat(password.length)}
+              </p>
+            </div>
+            <div className="shrink-0 flex items-center gap-2">
+              <button
+                onClick={() => setShowPass(p => !p)}
+                className="p-1.5 rounded-lg hover:bg-orange-100 text-orange-400 transition-colors"
+              >
+                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+              <button
+                onClick={() => copy(password, "pass")}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-orange-200 hover:border-orange-400 hover:text-orange-500 transition-colors"
+              >
+                <Copy size={13} />
+                {copiedPass ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Copy all */}
+        <button
+          onClick={() => {
+            copy(`Email: ${email}\nPassword: ${password}`, "pass");
+            toast.success("Credentials copied!");
+          }}
+          className="w-full mb-3 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm font-semibold text-gray-500 hover:border-orange-400 hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
+        >
+          <Copy size={15} /> Copy Both
+        </button>
+
+        {/* Done */}
+        <button
+          onClick={onDone}
+          className="w-full bg-[#FF7A00] hover:bg-orange-600 text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-orange-500/20"
+        >
+          Go to Vendors <ArrowRight size={16} />
+        </button>
+
+        <p className="text-center text-[11px] text-gray-400 mt-3">
+          The vendor can change their password after first login.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── AddVendor ─────────────────────────────────────────────────────────────────
 const AddVendor = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { adding, error } = useSelector((s: RootState) => s.vendors);
+  const { adding, error, newVendorCredentials } = useSelector((s: RootState) => s.admin);
 
   const fileRef                       = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver]       = useState(false);
@@ -79,19 +182,20 @@ const AddVendor = () => {
   // Cleanup on unmount
   useEffect(() => () => { dispatch(resetVendorState()); }, [dispatch]);
 
-  // Toast + navigate after save
+  // Show error toast if add fails
   const prevAdding = useRef(false);
   useEffect(() => {
-    if (prevAdding.current && !adding) {
-      if (!error) {
-        toast.success("Vendor created!");
-        setTimeout(() => navigate("/admin/vendors"), 1500);
-      } else {
-        toast.error(error);
-      }
+    if (prevAdding.current && !adding && error) {
+      toast.error(error);
     }
     prevAdding.current = adding;
-  }, [adding, error, navigate]);
+  }, [adding, error]);
+
+  // When modal "Done" is clicked
+  const handleModalDone = () => {
+    dispatch(clearNewVendorCredentials());
+    navigate("/admin/vendors");
+  };
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Images only"); return; }
@@ -104,18 +208,18 @@ const AddVendor = () => {
     if (adding) return;
     const errs: ErrorFields = {};
 
-    if (!form.name.trim())    errs.name = "Vendor name is required";
-    if (!form.email.trim())   errs.email = "Email is required";
+    if (!form.name.trim())     errs.name = "Vendor name is required";
+    if (!form.email.trim())    errs.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
       errs.email = "Enter a valid email";
-    if (!form.phone.trim())   errs.phone = "Phone is required";
+    if (!form.phone.trim())    errs.phone = "Phone is required";
     else if (!/^\+?[\d\s\-().]{7,20}$/.test(form.phone.trim()))
       errs.phone = "Enter a valid phone number";
     if (!form.capacity.trim()) errs.capacity = "Capacity is required";
     else if (isNaN(Number(form.capacity)) || Number(form.capacity) <= 0)
       errs.capacity = "Must be a positive number";
-    if (!fmtTime(timeFrom))  errs.deliveryStart = "Start time required";
-    if (!fmtTime(timeTo))    errs.deliveryEnd   = "End time required";
+    if (!fmtTime(timeFrom))    errs.deliveryStart = "Start time required";
+    if (!fmtTime(timeTo))      errs.deliveryEnd   = "End time required";
     else if (timeToMins(timeTo) <= timeToMins(timeFrom))
       errs.deliveryEnd = "End time must be after start";
 
@@ -140,6 +244,16 @@ const AddVendor = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f7f7] p-4 sm:p-6 lg:p-8">
+
+      {/* Credentials Modal */}
+      {newVendorCredentials && (
+        <CredentialsModal
+          name={newVendorCredentials.name}
+          email={newVendorCredentials.email}
+          password={newVendorCredentials.password}
+          onDone={handleModalDone}
+        />
+      )}
 
       {/* Header */}
       <div className="mb-8">
@@ -202,7 +316,6 @@ const AddVendor = () => {
                   onChange={(v) => {
                     setTimeFrom(v);
                     clearErr("deliveryStart");
-                    // reset end if it's no longer valid
                     if (fmtTime(timeTo) && timeToMins(timeTo) <= timeToMins(v)) {
                       setTimeTo(EMPTY_TIME);
                     }

@@ -10,57 +10,64 @@ interface Stat {
 }
 
 function parseValue(value: string): { numeric: number; suffix: string; prefix: string; decimals: number } {
-  const prefix = "";
   const match = value.match(/^([^\d]*)(\d[\d,.]*)(.*)$/);
-  if (!match) return { numeric: 0, suffix: value, prefix, decimals: 0 };
-
+  if (!match) return { numeric: 0, suffix: value, prefix: "", decimals: 0 };
   const raw = match[2].replace(/,/g, "");
   const numeric = parseFloat(raw);
   const decimals = raw.includes(".") ? raw.split(".")[1].length : 0;
-  const suffix = match[3];
-
-  return { numeric, suffix, prefix: match[1], decimals };
+  return { numeric, suffix: match[3], prefix: match[1], decimals };
 }
 
-function useCountUp(target: number, decimals: number, duration: number, start: boolean) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (!start) return;
-
-    let startTime: number | null = null;
-    const step = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(parseFloat((eased * target).toFixed(decimals)));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-
-    requestAnimationFrame(step);
-  }, [start, target, decimals, duration]);
-
-  return count;
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
 }
 
 function StatItem({ stat, started }: { stat: Stat; started: boolean }) {
-  const count = useCountUp(stat.numeric, stat.decimals, 2000, started);
+  const numRef = useRef<HTMLSpanElement>(null);
+  const rafRef = useRef<number>(0);
 
-  const formatted =
-    stat.decimals === 0
-      ? count >= 1000
-        ? count.toLocaleString("en-US", { maximumFractionDigits: 0 })
-        : count.toFixed(0)
-      : count.toFixed(stat.decimals);
+  useEffect(() => {
+    if (!started) return;
+
+    const duration = 2000;
+    let startTime: number | null = null;
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = easeOutCubic(progress);
+      const current = eased * stat.numeric;
+
+      if (numRef.current) {
+        const formatted =
+          stat.decimals === 0
+            ? current >= 1000
+              ? Math.round(current).toLocaleString("en-US")
+              : Math.round(current).toString()
+            : current.toFixed(stat.decimals);
+        numRef.current.textContent = stat.prefix + formatted + stat.suffix;
+      }
+
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [started, stat]);
+
+  const zeroFormatted =
+    stat.decimals === 0 ? "0" : (0).toFixed(stat.decimals);
 
   return (
     <div className="flex flex-col items-center gap-[clamp(0.25rem,0.8vw,1.5rem)] px-[clamp(0.5rem,2vw,5rem)]">
       <span
+        ref={numRef}
         style={{ fontFamily: "var(--font-manrope)" }}
         className="text-white text-[clamp(2rem,4vw,8rem)] font-extrabold tracking-tight"
       >
-        {stat.prefix}{formatted}{stat.suffix}
+        {stat.prefix}{zeroFormatted}{stat.suffix}
       </span>
       <span
         style={{ fontFamily: "var(--font-inter)" }}
@@ -89,11 +96,11 @@ function StatsBanner() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setStarted(true);
+          setTimeout(() => setStarted(true), 200);
           observer.disconnect();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.5 }
     );
 
     if (sectionRef.current) observer.observe(sectionRef.current);
