@@ -12,7 +12,7 @@ const app = express();
 
 // ✅ cors FIRST — before any body parser or routes
 app.use(cors({
-  origin: "http://49.13.70.253:3008",
+  origin: "http://localhost:5173",
   credentials: true,
 }));
 

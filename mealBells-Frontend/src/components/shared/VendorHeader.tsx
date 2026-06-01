@@ -33,7 +33,7 @@ const VendorHeader = () => {
   return (
     <header className="w-full h-14 px-4 flex items-center justify-between border-b border-gray-200 bg-white">
       {/* Left: Avatar + Vendor Name */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5"  onClick={() => navigate("/")}>
         <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 shrink-0">
           <Avatar />
         </div>

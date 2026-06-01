@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../app/store";
 import { signupUser, resetSignup } from "../../slices/authSlice";
 import "../../App.css";
@@ -12,6 +12,7 @@ import emailIcon from "../../assets/email.png";
 
 const Signup = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { signingUp, signupSuccess, error } = useSelector((s: RootState) => s.auth);
 
   const [showPassword, setShowPassword]               = useState(false);
@@ -33,6 +34,7 @@ const Signup = () => {
       setPassword("");
       setConfirmPassword("");
       setLocalError("");
+      navigate("/admin");
     }
   }, [signupSuccess]);
 
@@ -235,29 +237,10 @@ const Signup = () => {
               </div>
             )}
 
-            {/* Success Box */}
-            {signupSuccess && (
-              <div
-                className="flex items-start gap-2 mt-3 px-3 py-2.5 rounded-lg border text-[12px]"
-                style={{
-                  backgroundColor: "#f0fdf4",
-                  borderColor: "#bbf7d0",
-                  color: "#16a34a",
-                  fontFamily: "var(--font-inter)",
-                }}
-              >
-                <svg className="w-4 h-4 flex-shrink-0 mt-[1px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="9 12 11 14 15 10" />
-                </svg>
-                <span>{signupSuccess}</span>
-              </div>
-            )}
-
             {/* Create Account Button */}
             <button
               onClick={handleSignup}
-              disabled={signingUp || !!signupSuccess}
+              disabled={signingUp}
               type="button"
               className="w-full mt-3 h-[48px] bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium tracking-[4px] text-[13px] rounded-xl transition-all duration-200 shadow-md"
               style={{ fontFamily: "var(--font-inter)" }}
