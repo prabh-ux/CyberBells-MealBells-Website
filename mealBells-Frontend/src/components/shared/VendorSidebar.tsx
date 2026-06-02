@@ -25,7 +25,7 @@ const navItems = [
   { label: "Dashboard",   path: "/vendor/dashboard",      icon: LayoutDashboard },
   { label: "Today's Menu", path: "/vendor/menu",           icon: UtensilsCrossed },
   { label: "Weekly Menu", path: "/vendor/menu/weekly",    icon: CalendarDays },
-  { label: "Orders",      path: "/vendor/orders",         icon: ClipboardList },
+  { label: "Requested Dishes", path: "/vendor/requested-dishes", icon: ClipboardList },
   { label: "Delivery",    path: "/vendor/delivery",       icon: Truck },
   { label: "Reviews",     path: "/vendor/reviews",        icon: Star },
   { label: "Reports",     path: "/vendor/reports",        icon: BarChart3 },

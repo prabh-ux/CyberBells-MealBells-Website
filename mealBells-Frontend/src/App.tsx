@@ -42,6 +42,10 @@ import VendorDashboard from "./pages/vendor/VendorDashboard";
 import TodayMenu from "./pages/vendor/TodayMenu";
 import EditDish from "./pages/vendor/EditDish";
 import WeeklyMenu from "./pages/vendor/WeeklyMenu";
+import RequestedDishes from "./pages/vendor/RequestedDishes";
+import DeliveryStatusVendor from "./pages/vendor/DeliveryStatusVendor";
+import VendorReviews from "./pages/vendor/VendorReviews";
+import ReviewDetail from "./pages/vendor/ReviewDetail";
 
 
 
@@ -143,9 +147,10 @@ function App() {
                <Route path="/vendor/menu"     element={<TodayMenu />} /> 
              <Route path="/vendor/menu/edit" element={<EditDish />} />
              <Route path="/vendor/menu/weekly" element={<WeeklyMenu />} />
-              {/* <Route path="/vendor/orders"   element={<VendorOrders />} /> */}
-              {/* <Route path="/vendor/delivery" element={<VendorDelivery />} /> */}
-              {/* <Route path="/vendor/reviews"  element={<VendorReviews />} /> */}
+             <Route path="/vendor/requested-dishes" element={<RequestedDishes />} />
+             <Route path="/vendor/delivery" element={<DeliveryStatusVendor />} /> 
+              {<Route path="/vendor/reviews"  element={<VendorReviews />} /> }
+              <Route path="/vendor/reviews/:id" element={<ReviewDetail />} />
               {/* <Route path="/vendor/reports"  element={<VendorReports />} /> */}
               {/* <Route path="/vendor/settings" element={<VendorSettings />} /> */}
             </Route>
