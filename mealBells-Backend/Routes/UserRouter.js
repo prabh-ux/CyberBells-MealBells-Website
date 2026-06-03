@@ -1,33 +1,32 @@
 // Routes/userRoutes.js
 import { Router } from "express";
 import { ensureJwtValidation } from "../MiddleWare/jwtVerify.js";
-import {
-  getTodayMenu,
-  markAttendance,
-  getWeeklyMenu,
-  getDishDetails,
-  markAttendanceForDay,
-  submitReview,
-  getMyReviews,
-  submitDishRequest,
-  getConsumptionStats,
-} from "../Controllers/usersController.js";
+
+import { getTodayMenu, getWeeklyMenu, getDishDetails }     from "../Controllers/user/userMenuController.js";
+import { markAttendance, markAttendanceForDay }            from "../Controllers/user/userAttendanceController.js";
+import { submitReview, getMyReviews }                      from "../Controllers/user/userReviewController.js";
+import { submitDishRequest }                               from "../Controllers/user/userDishRequestController.js";
+import { getConsumptionStats }                             from "../Controllers/user/userStatsController.js";
+import { getUserTodayDelivery }                            from "../Controllers/shared/deliveryController.js";
+import { getMyOrganization }                            from "../Controllers/shared/organizationController.js";
 
 const router = Router();
 
-router.get ("/menu-today",  ensureJwtValidation, getTodayMenu);
-router.post("/attendance",  ensureJwtValidation, markAttendance);
-
-
-router.get("/menu-weekly", ensureJwtValidation, getWeeklyMenu);
-
+router.get  ("/menu-today",               ensureJwtValidation, getTodayMenu);
+router.get  ("/menu-weekly",              ensureJwtValidation, getWeeklyMenu);
 router.get  ("/dish/:scheduleId",         ensureJwtValidation, getDishDetails);
+
+router.post ("/attendance",               ensureJwtValidation, markAttendance);
 router.patch("/attendance/:scheduleId",   ensureJwtValidation, markAttendanceForDay);
 
-router.post("/review", ensureJwtValidation, submitReview);
+router.post ("/review",                   ensureJwtValidation, submitReview);
+router.get  ("/reviews",                  ensureJwtValidation, getMyReviews);
 
-router.get("/reviews", ensureJwtValidation, getMyReviews);
+router.post ("/dish-request",             ensureJwtValidation, submitDishRequest);
 
-router.post("/dish-request", ensureJwtValidation, submitDishRequest);
-router.get("/consumption-stats", ensureJwtValidation, getConsumptionStats);
+router.get  ("/consumption-stats",        ensureJwtValidation, getConsumptionStats);
+
+router.get  ("/delivery/today",           getUserTodayDelivery);
+router.get("/organization", ensureJwtValidation, getMyOrganization);
+
 export default router;

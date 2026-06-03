@@ -1,6 +1,6 @@
-import { userModel } from "../Models/user.js";
+import { userModel } from "../../Models/user.js";
 import bcrypt        from "bcrypt";
-import cloudinary    from "../utils/cloudnary.js";
+import cloudinary    from "../../utils/cloudnary.js";
 
 // ── Add User ─────────────────────────────────────────────────────────────────
 export const addUser = async (req, res) => {

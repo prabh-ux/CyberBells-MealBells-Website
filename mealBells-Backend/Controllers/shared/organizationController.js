@@ -1,5 +1,5 @@
-import { organizationModel } from "../Models/organization.js";
-import { userModel }         from "../Models/user.js";
+import { organizationModel } from "../../Models/organization.js";
+import { userModel }         from "../../Models/user.js";
 
 export const getMyOrganization = async (req, res) => {
   try {
@@ -23,18 +23,27 @@ export const updateMyOrganization = async (req, res) => {
     const user = await userModel.findById(req.user.id).select("organizationId");
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    const { companyName, contactEmail, officeAddress } = req.body;
+    const {
+      companyName,
+      contactEmail,
+      officeAddress,
+      mealTime,
+      cutoffTime,
+      allowDishRequests,
+    } = req.body;
 
     const updates = {
-      ...(companyName    !== undefined && { companyName }),
-      ...(contactEmail   !== undefined && { contactEmail }),
-      ...(officeAddress  !== undefined && { officeAddress }),
+      ...(companyName        !== undefined && { companyName }),
+      ...(contactEmail       !== undefined && { contactEmail }),
+      ...(officeAddress      !== undefined && { officeAddress }),
+      ...(mealTime           !== undefined && { mealTime }),
+      ...(cutoffTime         !== undefined && { cutoffTime }),
+      ...(allowDishRequests  !== undefined && { allowDishRequests }),
     };
 
     let org;
 
     if (user.organizationId) {
-      // Update existing
       org = await organizationModel.findByIdAndUpdate(
         user.organizationId,
         updates,

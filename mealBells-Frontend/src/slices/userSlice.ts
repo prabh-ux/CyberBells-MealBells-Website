@@ -77,13 +77,13 @@ export interface ChartBar {
 }
 
 export interface ConsumptionStatsData {
-  period:       string;
-  daysAttended: number;
-  daysSkipped:  number;
-  totalMeals:   number;
-  mostEaten:    string;
+  period:        string;
+  daysAttended:  number;
+  daysSkipped:   number;
+  totalMeals:    number;
+  mostEaten:     string;
   currentStreak: number;
-  chartData:    ChartBar[];
+  chartData:     ChartBar[];
 }
 
 export interface ReviewSummary {
@@ -91,8 +91,8 @@ export interface ReviewSummary {
   avgRating:    number;
 }
 
-export type DietOption  = "Veg" | "Non-Veg" | "Both";
-export type SpiceLevel  = "Mild" | "Normal" | "Spicy";
+export type DietOption = "Veg" | "Non-Veg" | "Both";
+export type SpiceLevel = "Mild" | "Normal" | "Spicy";
 
 export interface DishRequestPayload {
   requestedDate:     string;
@@ -103,7 +103,6 @@ export interface DishRequestPayload {
 
 // ── Thunks ────────────────────────────────────────────────────────────────────
 
-/** Fetch today's menu */
 export const fetchTodayMenu = createAsyncThunk(
   "user/fetchTodayMenu",
   async (_, { rejectWithValue }) => {
@@ -116,7 +115,6 @@ export const fetchTodayMenu = createAsyncThunk(
   }
 );
 
-/** Mark attendance (today panel — POST) */
 export const markAttendance = createAsyncThunk(
   "user/markAttendance",
   async (
@@ -132,7 +130,6 @@ export const markAttendance = createAsyncThunk(
   }
 );
 
-/** Fetch weekly menu (with optional offset) */
 export const fetchWeeklyMenu = createAsyncThunk(
   "user/fetchWeeklyMenu",
   async (offset: number = 0, { rejectWithValue }) => {
@@ -145,7 +142,6 @@ export const fetchWeeklyMenu = createAsyncThunk(
   }
 );
 
-/** Fetch a single dish's details by scheduleId */
 export const fetchDishDetails = createAsyncThunk(
   "user/fetchDishDetails",
   async (scheduleId: string, { rejectWithValue }) => {
@@ -158,7 +154,6 @@ export const fetchDishDetails = createAsyncThunk(
   }
 );
 
-/** Mark / update attendance from the dish details panel (PATCH) */
 export const patchDishAttendance = createAsyncThunk(
   "user/patchDishAttendance",
   async (
@@ -174,7 +169,6 @@ export const patchDishAttendance = createAsyncThunk(
   }
 );
 
-/** Fetch the current user's reviews (paginated) */
 export const fetchMyReviews = createAsyncThunk(
   "user/fetchMyReviews",
   async ({ page, limit }: { page: number; limit: number }, { rejectWithValue }) => {
@@ -187,19 +181,18 @@ export const fetchMyReviews = createAsyncThunk(
   }
 );
 
-/** Submit or update a meal review */
 export const submitReview = createAsyncThunk(
   "user/submitReview",
   async (
     payload: {
-      scheduleId: string;
+      scheduleId:    string;
       overallRating: number;
-      taste: number;
-      quantity: number;
-      quality: number;
-      freshness: number;
-      comment: string;
-      tags: string[];
+      taste:         number;
+      quantity:      number;
+      quality:       number;
+      freshness:     number;
+      comment:       string;
+      tags:          string[];
     },
     { rejectWithValue }
   ) => {
@@ -212,14 +205,11 @@ export const submitReview = createAsyncThunk(
   }
 );
 
-/** Fetch consumption stats for a given period */
 export const fetchConsumptionStats = createAsyncThunk(
   "user/fetchConsumptionStats",
   async (period: ConsumptionPeriod, { rejectWithValue }) => {
     try {
-      const { data } = await axiosInstance.get("/user/consumption-stats", {
-        params: { period },
-      });
+      const { data } = await axiosInstance.get("/user/consumption-stats", { params: { period } });
       if (data.success) return data.data as ConsumptionStatsData;
       return rejectWithValue(data.msg ?? "Failed to load stats.");
     } catch (err: any) {
@@ -228,19 +218,13 @@ export const fetchConsumptionStats = createAsyncThunk(
   }
 );
 
-/** Fetch review summary (total + avg rating) */
 export const fetchReviewSummary = createAsyncThunk(
   "user/fetchReviewSummary",
   async (_, { rejectWithValue }) => {
     try {
-      const { data } = await axiosInstance.get("/user/reviews", {
-        params: { page: 1, limit: 1 },
-      });
+      const { data } = await axiosInstance.get("/user/reviews", { params: { page: 1, limit: 1 } });
       if (data.success) {
-        return {
-          totalReviews: data.data.totalReviews,
-          avgRating:    data.data.avgRating,
-        } as ReviewSummary;
+        return { totalReviews: data.data.totalReviews, avgRating: data.data.avgRating } as ReviewSummary;
       }
       return rejectWithValue("Failed to load review summary.");
     } catch (err: any) {
@@ -249,7 +233,6 @@ export const fetchReviewSummary = createAsyncThunk(
   }
 );
 
-/** Submit a dish request */
 export const submitDishRequest = createAsyncThunk(
   "user/submitDishRequest",
   async (payload: DishRequestPayload, { rejectWithValue }) => {
@@ -277,9 +260,9 @@ const userSlice = createSlice({
     loadingWeekly: false,
 
     // dish details
-    dishDetails:    null as DishDetailsData | null,
-    loadingDish:    false,
-    dishError:      null as string | null,
+    dishDetails: null as DishDetailsData | null,
+    loadingDish: false,
+    dishError:   null as string | null,
 
     // reviews
     reviewsData:    null as ReviewsData | null,
@@ -291,40 +274,37 @@ const userSlice = createSlice({
     loadingConsumptionStats: false,
     consumptionStatsError:   null as string | null,
 
-    // review summary (used in consumption report)
+    // review summary
     reviewSummary:        null as ReviewSummary | null,
     loadingReviewSummary: false,
 
     // dish request
-    dishRequestSuccess:   false,
+    dishRequestSuccess:    false,
     submittingDishRequest: false,
-    dishRequestError:     null as string | null,
+    dishRequestError:      null as string | null,
 
-    // shared loading flags
-    voting:      false,   // attendance in today panel
-    dishVoting:  false,   // attendance in dish-details panel
-    submitting:  false,   // review submission
+    // shared flags
+    voting:     false,
+    dishVoting: false,
+    submitting: false,
 
     error: null as string | null,
   },
   reducers: {
-    resetUserError(state)       { state.error = null; },
-    resetDishDetails(state)     { state.dishDetails = null; state.dishError = null; },
-    resetReviewsError(state)    { state.reviewsError = null; },
-    resetDishRequest(state)     {
-      state.dishRequestSuccess  = false;
-      state.dishRequestError    = null;
-    },
+    resetUserError(state)        { state.error = null; },
+    resetDishDetails(state)      { state.dishDetails = null; state.dishError = null; },
+    resetReviewsError(state)     { state.reviewsError = null; },
+    resetDishRequest(state)      { state.dishRequestSuccess = false; state.dishRequestError = null; },
     resetConsumptionError(state) { state.consumptionStatsError = null; },
   },
   extraReducers: (builder) => {
 
-    // ── fetchTodayMenu ──────────────────────────────────────────────────────
+    // fetchTodayMenu
     builder.addCase(fetchTodayMenu.pending,   (state) => { state.loadingToday = true;  state.error = null; });
     builder.addCase(fetchTodayMenu.fulfilled, (state, { payload }) => { state.loadingToday = false; state.todayMenu = payload; });
     builder.addCase(fetchTodayMenu.rejected,  (state, { payload }) => { state.loadingToday = false; state.error = payload as string; });
 
-    // ── markAttendance (POST — today panel) ─────────────────────────────────
+    // markAttendance
     builder.addCase(markAttendance.pending,   (state) => { state.voting = true;  state.error = null; });
     builder.addCase(markAttendance.fulfilled, (state, { payload }) => {
       state.voting = false;
@@ -332,17 +312,17 @@ const userSlice = createSlice({
     });
     builder.addCase(markAttendance.rejected,  (state, { payload }) => { state.voting = false; state.error = payload as string; });
 
-    // ── fetchWeeklyMenu ─────────────────────────────────────────────────────
+    // fetchWeeklyMenu
     builder.addCase(fetchWeeklyMenu.pending,   (state) => { state.loadingWeekly = true;  state.error = null; });
     builder.addCase(fetchWeeklyMenu.fulfilled, (state, { payload }) => { state.loadingWeekly = false; state.weeklyMenu = payload; });
     builder.addCase(fetchWeeklyMenu.rejected,  (state, { payload }) => { state.loadingWeekly = false; state.error = payload as string; });
 
-    // ── fetchDishDetails ────────────────────────────────────────────────────
+    // fetchDishDetails
     builder.addCase(fetchDishDetails.pending,   (state) => { state.loadingDish = true;  state.dishError = null; });
     builder.addCase(fetchDishDetails.fulfilled, (state, { payload }) => { state.loadingDish = false; state.dishDetails = payload; });
     builder.addCase(fetchDishDetails.rejected,  (state, { payload }) => { state.loadingDish = false; state.dishError = payload as string; });
 
-    // ── patchDishAttendance (PATCH — dish-details panel) ────────────────────
+    // patchDishAttendance
     builder.addCase(patchDishAttendance.pending,   (state) => { state.dishVoting = true; });
     builder.addCase(patchDishAttendance.fulfilled, (state, { payload }) => {
       state.dishVoting = false;
@@ -350,51 +330,30 @@ const userSlice = createSlice({
     });
     builder.addCase(patchDishAttendance.rejected,  (state) => { state.dishVoting = false; });
 
-    // ── fetchMyReviews ──────────────────────────────────────────────────────
+    // fetchMyReviews
     builder.addCase(fetchMyReviews.pending,   (state) => { state.loadingReviews = true;  state.reviewsError = null; });
     builder.addCase(fetchMyReviews.fulfilled, (state, { payload }) => { state.loadingReviews = false; state.reviewsData = payload; });
     builder.addCase(fetchMyReviews.rejected,  (state, { payload }) => { state.loadingReviews = false; state.reviewsError = payload as string; });
 
-    // ── submitReview ────────────────────────────────────────────────────────
+    // submitReview
     builder.addCase(submitReview.pending,   (state) => { state.submitting = true;  state.error = null; });
     builder.addCase(submitReview.fulfilled, (state) => { state.submitting = false; });
     builder.addCase(submitReview.rejected,  (state, { payload }) => { state.submitting = false; state.error = payload as string; });
 
-    // ── fetchConsumptionStats ───────────────────────────────────────────────
-    builder.addCase(fetchConsumptionStats.pending, (state) => {
-      state.loadingConsumptionStats  = true;
-      state.consumptionStatsError    = null;
-    });
-    builder.addCase(fetchConsumptionStats.fulfilled, (state, { payload }) => {
-      state.loadingConsumptionStats = false;
-      state.consumptionStats        = payload;
-    });
-    builder.addCase(fetchConsumptionStats.rejected, (state, { payload }) => {
-      state.loadingConsumptionStats = false;
-      state.consumptionStatsError   = payload as string;
-    });
+    // fetchConsumptionStats
+    builder.addCase(fetchConsumptionStats.pending,   (state) => { state.loadingConsumptionStats = true;  state.consumptionStatsError = null; });
+    builder.addCase(fetchConsumptionStats.fulfilled, (state, { payload }) => { state.loadingConsumptionStats = false; state.consumptionStats = payload; });
+    builder.addCase(fetchConsumptionStats.rejected,  (state, { payload }) => { state.loadingConsumptionStats = false; state.consumptionStatsError = payload as string; });
 
-    // ── fetchReviewSummary ──────────────────────────────────────────────────
+    // fetchReviewSummary
     builder.addCase(fetchReviewSummary.pending,   (state) => { state.loadingReviewSummary = true; });
-    builder.addCase(fetchReviewSummary.fulfilled, (state, { payload }) => {
-      state.loadingReviewSummary = false;
-      state.reviewSummary        = payload;
-    });
+    builder.addCase(fetchReviewSummary.fulfilled, (state, { payload }) => { state.loadingReviewSummary = false; state.reviewSummary = payload; });
     builder.addCase(fetchReviewSummary.rejected,  (state) => { state.loadingReviewSummary = false; });
 
-    // ── submitDishRequest ───────────────────────────────────────────────────
-    builder.addCase(submitDishRequest.pending, (state) => {
-      state.submittingDishRequest = true;
-      state.dishRequestError      = null;
-    });
-    builder.addCase(submitDishRequest.fulfilled, (state) => {
-      state.submittingDishRequest = false;
-      state.dishRequestSuccess    = true;
-    });
-    builder.addCase(submitDishRequest.rejected, (state, { payload }) => {
-      state.submittingDishRequest = false;
-      state.dishRequestError      = payload as string;
-    });
+    // submitDishRequest
+    builder.addCase(submitDishRequest.pending,   (state) => { state.submittingDishRequest = true;  state.dishRequestError = null; });
+    builder.addCase(submitDishRequest.fulfilled, (state) => { state.submittingDishRequest = false; state.dishRequestSuccess = true; });
+    builder.addCase(submitDishRequest.rejected,  (state, { payload }) => { state.submittingDishRequest = false; state.dishRequestError = payload as string; });
   },
 });
 

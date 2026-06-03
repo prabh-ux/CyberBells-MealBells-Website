@@ -1,6 +1,6 @@
-import { dishModel }    from "../Models/dish.js";
-import { userModel }    from "../Models/user.js";
-import { MenuSchedule } from "../Models/menuSchedule.js";
+import { dishModel }    from "../../Models/dish.js";
+import { userModel }    from "../../Models/user.js";
+import { MenuSchedule } from "../../Models/menuSchedule.js";
 
 // ── Shared: core field update for a dish document ─────────────────────────────
 export const applyDishUpdates = async (dishId, body, file) => {

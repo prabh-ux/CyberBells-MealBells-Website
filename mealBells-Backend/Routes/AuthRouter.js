@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { loginValidator, signUpValidator } from "../MiddleWare/authValidator.js";
-import { login, signUp,getMe,logout,updateMe } from "../Controllers/authController.js";
+import { login, signUp,getMe,logout,updateMe } from "../Controllers/shared/authController.js";
 import { ensureJwtValidation } from "../MiddleWare/jwtVerify.js";
 import { uplode } from "../utils/multer.js";
 

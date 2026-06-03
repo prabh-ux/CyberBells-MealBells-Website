@@ -5,6 +5,7 @@ import authReducer         from "../slices/authSlice";
 import organizationReducer from "../slices/organizationSlice";
 import adminReducer        from "../slices/adminSlice";
 import userReducer         from "../slices/userSlice";
+import deliveryReducer     from "../slices/deliverySlice"; 
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     organization: organizationReducer,
     admin:        adminReducer,
     user:         userReducer,
+    delivery:     deliveryReducer, 
   },
 });
 

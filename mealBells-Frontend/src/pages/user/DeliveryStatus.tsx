@@ -1,257 +1,267 @@
-import { useState } from "react";
-import { Bike,
-  CheckCircle2,
-  MapPin,
-  Package,
-  ShoppingBag,
-  Utensils,
-  RefreshCw } from "lucide-react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../app/store";
+import { fetchUserDelivery } from "../../slices/deliverySlice";
+import type { UserDeliveryStep } from "../../slices/deliverySlice";
+import { fetchUserOrganization } from "../../slices/organizationSlice";
+import { formatTime } from "../../utils/Timeformat";
+import {
+  Bike, CheckCircle2, MapPin, Package,
+  ShoppingBag, Utensils, RefreshCw, Loader2,
+} from "lucide-react";
 
-interface TrackingStep {
-  id: string;
-  label: string;
-  time: string | null;
-  scheduledTime: string | null;
-  status: "done" | "active" | "pending";
-  icon: React.FC<{ className?: string }>;
-}
+// ── Icon map ──────────────────────────────────────────────────────────────────
 
-const STEPS: TrackingStep[] = [
-  {
-    id: "preparing",
-    label: "Preparing",
-    time: "11:30 AM",
-    scheduledTime: null,
-    status: "done",
-    icon: Utensils },
-  {
-    id: "packed",
-    label: "Packed",
-    time: "11:45 AM",
-    scheduledTime: null,
-    status: "done",
-    icon: Package },
-  {
-    id: "delivery",
-    label: "Out for Delivery",
-    time: "12:05 PM",
-    scheduledTime: null,
-    status: "active",
-    icon: Bike },
-  {
-    id: "arrived",
-    label: "Arrived at Office",
-    time: null,
-    scheduledTime: "12:20 PM",
-    status: "pending",
-    icon: MapPin },
-  {
-    id: "pickup",
-    label: "Ready for Pickup",
-    time: null,
-    scheduledTime: "12:30 PM",
-    status: "pending",
-    icon: ShoppingBag },
-];
+const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
+  Utensils, Package, Bike, MapPin, ShoppingBag,
+};
+
+// ── StepItem ──────────────────────────────────────────────────────────────────
+
+const StepItem: React.FC<{ step: UserDeliveryStep }> = ({ step }) => {
+  const Icon = ICON_MAP[step.icon] ?? Utensils;
+
+  return (
+    <div className="relative flex gap-6 pb-10 last:pb-0">
+      <div className="relative z-10 shrink-0">
+        {step.status === "done" ? (
+          <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shadow-md shadow-orange-200">
+            <CheckCircle2 className="w-5 h-5 text-white" />
+          </div>
+        ) : step.status === "active" ? (
+          <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-300 ring-4 ring-orange-100">
+            <Icon className="w-5 h-5 text-white" />
+          </div>
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center">
+            <Icon className="w-4 h-4 text-gray-300" />
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 pt-1.5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className={`font-bold text-sm ${step.status === "pending" ? "text-gray-400" : "text-gray-900"}`}>
+              {step.label}
+            </p>
+            <p className={`text-xs mt-0.5 ${
+              step.status === "done"    ? "text-orange-500 font-semibold"
+              : step.status === "active" ? "text-orange-400 font-semibold"
+              : "text-gray-400"
+            }`}>
+              {step.time ?? "Pending"}
+            </p>
+          </div>
+          {step.status === "active" && (
+            <span className="flex items-center gap-1.5 bg-orange-50 text-orange-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+              Live
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── DeliveryStatus ────────────────────────────────────────────────────────────
 
 export default function DeliveryStatus() {
-  const [refreshing, setRefreshing] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1200);
-  };
+  const { userDelivery, loadingUserDelivery, userDeliveryError } = useSelector(
+    (s: RootState) => s.delivery
+  );
+  const org = useSelector((s: RootState) => s.organization.data);
 
-  const activeStep = STEPS.find((s) => s.status === "active");
-  const doneCount = STEPS.filter((s) => s.status === "done").length;
-  const progress = (doneCount / (STEPS.length - 1)) * 100;
+  useEffect(() => {
+    dispatch(fetchUserDelivery());
+    dispatch(fetchUserOrganization());
+  }, [dispatch]);
+
+  // ── Derived values ─────────────────────────────────────────────────────────
+
+  const doneCount  = userDelivery?.steps.filter((s) => s.status === "done").length ?? 0;
+  const totalSteps = (userDelivery?.steps.length ?? 1) - 1;
+  const progress   = totalSteps > 0 ? (doneCount / totalSteps) * 100 : 0;
+  const activeStep = userDelivery?.steps.find((s) => s.status === "active");
+
+  /**
+   * estimatedArrival priority:
+   *   1. Live value from delivery record (set by admin/driver)
+   *   2. Fallback → org mealTime (scheduled meal time from admin settings)
+   *   3. "—" if neither exists
+   */
+  const hasLiveEta      = Boolean(userDelivery?.estimatedArrival);
+  const displayEta      = hasLiveEta
+    ? userDelivery!.estimatedArrival
+    : org?.mealTime
+    ? formatTime(org.mealTime)
+    : "—";
+  const etaIsScheduled  = !hasLiveEta && Boolean(org?.mealTime);
+
+  // ── Loading ────────────────────────────────────────────────────────────────
+
+  if (loadingUserDelivery) {
+    return (
+      <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // ── Error ──────────────────────────────────────────────────────────────────
+
+  if (userDeliveryError) {
+    return (
+      <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
+          <p className="text-gray-500 font-medium mb-3">{userDeliveryError}</p>
+          <button
+            onClick={() => dispatch(fetchUserDelivery())}
+            className="text-sm text-orange-500 underline"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
       <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
-        {/* ── Header ── */}
 
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-bold text-gray-900 leading-tight">
-              Delivery Status
-            </h1>
-          </div>
+          <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+            Delivery Status
+          </h1>
           <button
-            type="button"
-            onClick={handleRefresh}
+            onClick={() => dispatch(fetchUserDelivery())}
             className="flex items-center gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors"
           >
-            <RefreshCw
-              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
-            />
+            <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* ── LEFT: ETA Card ── */}
-          <div className="space-y-5">
-            {/* ETA */}
-            <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-sm text-center">
-              <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-5">
-                <Bike className="w-8 h-8 text-orange-500" />
-              </div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
-                Estimated Arrival
-              </p>
-              <p className="text-5xl font-bold text-gray-900 tracking-tight mb-4">
-                12:30 PM
-              </p>
-              <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-600 text-xs font-bold px-4 py-1.5 rounded-full border border-green-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                On Schedule
-              </span>
-            </div>
+        {userDelivery && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-            {/* Order info */}
-            <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden bg-orange-50 shrink-0">
-                  <img
-                    src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=100&q=80"
-                    alt="dish"
-                    className="w-full h-full object-cover"
+            {/* ── LEFT column ─────────────────────────────────────────────── */}
+            <div className="space-y-5">
+
+              {/* ETA card */}
+              <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-sm text-center">
+                <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-5">
+                  <Bike className="w-8 h-8 text-orange-500" />
+                </div>
+
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
+                  Estimated Arrival
+                </p>
+
+                {/* ETA value — live or fallback to org mealTime */}
+                <p className="text-5xl font-bold text-gray-900 tracking-tight mb-1">
+                  {displayEta}
+                </p>
+
+                {/* Subtle label when showing scheduled meal time */}
+                {etaIsScheduled && (
+                  <p className="text-xs text-gray-400 mb-4">
+                    Scheduled meal time
+                  </p>
+                )}
+
+                {!etaIsScheduled && <div className="mb-4" />}
+
+                <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-4 py-1.5 rounded-full border ${
+                  userDelivery.isCompleted
+                    ? "bg-green-50 text-green-600 border-green-100"
+                    : "bg-orange-50 text-orange-600 border-orange-100"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    userDelivery.isCompleted ? "bg-green-500" : "bg-orange-500 animate-pulse"
+                  }`} />
+                  {userDelivery.isCompleted ? "Delivered" : "On the way"}
+                </span>
+              </div>
+
+              {/* Dish info */}
+              {userDelivery.dish?.name && (
+                <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-orange-50 shrink-0">
+                      {userDelivery.dish.image ? (
+                        <img
+                          src={userDelivery.dish.image}
+                          alt={userDelivery.dish.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Utensils className="w-6 h-6 text-orange-300" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-sm truncate">
+                        {userDelivery.dish.name}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">Today's meal</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Progress bar */}
+              <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                    Progress
+                  </p>
+                  <p className="text-xs font-bold text-orange-500">
+                    {doneCount} of {totalSteps} steps
+                  </p>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-orange-500 rounded-full transition-all duration-700"
+                    style={{ width: `${progress}%` }}
                   />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-gray-900 text-sm truncate">
-                    Zen Harvest Bowl
+                {activeStep && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Currently:{" "}
+                    <span className="font-semibold text-orange-500">{activeStep.label}</span>
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">Order #LM-8291</p>
-                </div>
-                <button
-                  type="button"
-                  className="text-xs font-bold text-orange-500 hover:text-orange-600 transition-colors shrink-0"
-                >
-                  Details
-                </button>
+                )}
               </div>
             </div>
 
-            {/* Progress bar */}
-            <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                  Progress
-                </p>
-                <p className="text-xs font-bold text-orange-500">
-                  {doneCount} of {STEPS.length - 1} steps
-                </p>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-orange-500 rounded-full transition-all duration-700"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                Currently:{" "}
-                <span className="font-semibold text-orange-500">
-                  {activeStep?.label}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          {/* ── CENTER + RIGHT: Timeline ── */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-sm">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-8">
-                Tracking Timeline
-              </h2>
-
-              <div className="relative">
-                {/* Vertical line */}
-                <div className="absolute left-5 top-5 bottom-5 w-px bg-gray-100" />
-
-                <div className="space-y-0">
-                  {STEPS.map((step, _) => {
-                    const Icon = step.icon;
-
-                    return (
-                      <div
-                        key={step.id}
-                        className="relative flex gap-6 pb-10 last:pb-0"
-                      >
-                        {/* Icon circle */}
-                        <div className="relative z-10 shrink-0">
-                          {step.status === "done" ? (
-                            <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shadow-md shadow-orange-200">
-                              <CheckCircle2 className="w-5 h-5 text-white" />
-                            </div>
-                          ) : step.status === "active" ? (
-                            <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-300 ring-4 ring-orange-100">
-                              <Icon className="w-5 h-5 text-white" />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center">
-                              <Icon className="w-4 h-4 text-gray-300" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 pt-1.5">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p
-                                className={`font-bold text-sm ${
-                                  step.status === "pending"
-                                    ? "text-gray-400"
-                                    : "text-gray-900"
-                                }`}
-                              >
-                                {step.label}
-                              </p>
-                              <p
-                                className={`text-xs mt-0.5 ${
-                                  step.status === "done"
-                                    ? "text-orange-500 font-semibold"
-                                    : step.status === "active"
-                                      ? "text-orange-400 font-semibold"
-                                      : "text-gray-400"
-                                }`}
-                              >
-                                {step.time
-                                  ? step.time
-                                  : `Scheduled for ${step.scheduledTime}`}
-                              </p>
-                            </div>
-
-                            {/* Active badge */}
-                            {step.status === "active" && (
-                              <span className="flex items-center gap-1.5 bg-orange-50 text-orange-600 text-[10px] font-bold px-2.5 py-1 rounded-full border border-orange-100 shrink-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                Live
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Delivery image for active step */}
-                          {step.id === "delivery" && (
-                            <div className="mt-4 rounded-2xl overflow-hidden h-40 w-72">
-                              <img
-                                src="https://images.unsplash.com/photo-1526367790999-0150786686a2?w=600&q=80"
-                                alt="delivery"
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+            {/* ── RIGHT: Timeline ──────────────────────────────────────────── */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-sm">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-8">
+                  Tracking Timeline
+                </h2>
+                <div className="relative">
+                  <div className="absolute left-5 top-5 bottom-5 w-px bg-gray-100" />
+                  <div className="space-y-0">
+                    {userDelivery.steps.map((step) => (
+                      <StepItem key={step.id} step={step} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
+
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

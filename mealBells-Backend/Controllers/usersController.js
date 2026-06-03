@@ -1,4 +1,4 @@
-// Controllers/menu.controller.js
+// Controllers/usersController.js
 import mongoose from "mongoose";
 import { dishModel }    from "../Models/dish.js";
 import { MenuSchedule } from "../Models/menuSchedule.js";

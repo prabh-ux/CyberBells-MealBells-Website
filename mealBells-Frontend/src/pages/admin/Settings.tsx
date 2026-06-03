@@ -1,7 +1,8 @@
-import { useState, useEffect }          from "react";
-import { useDispatch, useSelector }     from "react-redux";
-import type { RootState, AppDispatch }  from "../../app/store";
+import { useState, useEffect }         from "react";
+import { useDispatch, useSelector }    from "react-redux";
+import type { RootState, AppDispatch } from "../../app/store";
 import { fetchOrganization, updateOrganization } from "../../slices/organizationSlice";
+import type { OrgUpdatePayload }       from "../../slices/organizationSlice";
 import toast from "react-hot-toast";
 
 import alignJustifyIcon  from "../../assets/alignJustifyIcon.png";
@@ -15,16 +16,27 @@ import lockReset         from "../../assets/lockReset.png";
 import refreshIcon       from "../../assets/refreshIcon.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface OrgFields {
-  companyName:   string;
-  contactEmail:  string;
-  officeAddress: string;
-}
+type FormState = OrgUpdatePayload;
 
-const ORG_DEFAULT: OrgFields = {
-  companyName:   "",
-  contactEmail:  "",
-  officeAddress: "",
+const FORM_DEFAULT: FormState = {
+  companyName:       "",
+  contactEmail:      "",
+  officeAddress:     "",
+  mealTime:          "12:30",
+  cutoffTime:        "09:00",
+  allowDishRequests: true,
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Convert "HH:mm" (24h) → "hh:mm AM/PM" for display */
+const to12Hour = (val: string) => {
+  const [hStr, mStr] = val.split(":");
+  const h = parseInt(hStr, 10);
+  const m = mStr ?? "00";
+  const period = h >= 12 ? "PM" : "AM";
+  const h12    = h % 12 === 0 ? 12 : h % 12;
+  return `${String(h12).padStart(2, "0")}:${m} ${period}`;
 };
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
@@ -72,38 +84,39 @@ function SectionHeader({ icon, iconBg, title, description }: {
 export default function Settings() {
   const dispatch = useDispatch<AppDispatch>();
 
-  // ── Redux state
   const { data: orgData, loading, saving, error } = useSelector(
     (state: RootState) => state.organization
   );
 
-  // ── Local form state
-  const [form, setForm] = useState<OrgFields>(ORG_DEFAULT);
+  // ── Single form state for everything saved to Redux/backend
+  const [form, setForm] = useState<FormState>(FORM_DEFAULT);
 
-  // ── Local UI state
-  const [allowDishRequests, setAllowDishRequests] = useState(true);
-  const [twoFactor,         setTwoFactor]         = useState(false);
-  const [emailAlerts,       setEmailAlerts]       = useState(true);
-  const [mobilePush,        setMobilePush]        = useState(true);
-  const [dailyVendor,       setDailyVendor]       = useState(false);
+  // ── Local-only UI state (not persisted)
+  const [twoFactor,   setTwoFactor]   = useState(false);
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [mobilePush,  setMobilePush]  = useState(true);
+  const [dailyVendor, setDailyVendor] = useState(false);
 
-  // ── Fetch org on mount
+  // ── Fetch on mount
   useEffect(() => {
     dispatch(fetchOrganization());
   }, [dispatch]);
 
-  // ── Sync Redux data → local form
+  // ── Sync Redux → form
   useEffect(() => {
     if (orgData) {
       setForm({
-        companyName:   orgData.companyName,
-        contactEmail:  orgData.contactEmail,
-        officeAddress: orgData.officeAddress,
+        companyName:       orgData.companyName       ?? "",
+        contactEmail:      orgData.contactEmail       ?? "",
+        officeAddress:     orgData.officeAddress      ?? "",
+        mealTime:          orgData.mealTime           ?? "12:30",
+        cutoffTime:        orgData.cutoffTime         ?? "09:00",
+        allowDishRequests: orgData.allowDishRequests  ?? true,
       });
     }
   }, [orgData]);
 
-  // ── Save
+  // ── Save all fields in one shot
   const handleSave = async () => {
     const result = await dispatch(updateOrganization(form));
     if (updateOrganization.fulfilled.match(result)) {
@@ -113,8 +126,7 @@ export default function Settings() {
     }
   };
 
-  // ── Reset
-  const handleReset = () => setForm(ORG_DEFAULT);
+  const handleReset = () => setForm(FORM_DEFAULT);
 
   return (
     <div className="min-h-screen bg-gray-100 px-4 py-8 sm:px-6 lg:px-8 font-[var(--font-inter)]">
@@ -129,7 +141,7 @@ export default function Settings() {
 
       <div className="space-y-4">
 
-        {/* ── General (Redux) ── */}
+        {/* ── General ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
           <SectionHeader
             icon={alignJustifyIcon}
@@ -180,25 +192,51 @@ export default function Settings() {
           )}
         </section>
 
-        {/* ── Meal Settings (local) ── */}
+        {/* ── Meal Settings ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
-          <SectionHeader icon={utensilsIcon} iconBg="bg-blue-100" title="Meal Settings" description="Define default schedules and interaction rules for employee meals." />
+          <SectionHeader
+            icon={utensilsIcon}
+            iconBg="bg-blue-100"
+            title="Meal Settings"
+            description="Define default schedules and interaction rules for employee meals."
+          />
+
           <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            {/* Meal Time */}
             <div>
               <label className="mb-1.5 block text-sm text-gray-600">Default Meal Time</label>
-              <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5">
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 focus-within:ring-2 focus-within:ring-orange-300">
                 <img src={clockIcon} alt="clock" className="h-4 w-4 opacity-40 shrink-0" />
-                <span className="text-sm text-gray-800">12:30 PM</span>
+                <input
+                  type="time"
+                  value={form.mealTime}
+                  onChange={(e) => setForm((p) => ({ ...p, mealTime: e.target.value }))}
+                  className="flex-1 bg-transparent text-sm text-gray-800 focus:outline-none"
+                />
+                <span className="text-xs text-gray-400 shrink-0">{to12Hour(form.mealTime)}</span>
               </div>
             </div>
+
+            {/* Cutoff Time */}
             <div>
               <label className="mb-1.5 block text-sm text-gray-600">Cut-off Time for Attendance</label>
-              <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5">
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 focus-within:ring-2 focus-within:ring-orange-300">
                 <img src={timerIcon} alt="timer" className="h-4 w-4 opacity-40 shrink-0" />
-                <span className="text-sm text-gray-800">09:00 AM</span>
+                <input
+                  type="time"
+                  value={form.cutoffTime}
+                  onChange={(e) => setForm((p) => ({ ...p, cutoffTime: e.target.value }))}
+                  className="flex-1 bg-transparent text-sm text-gray-800 focus:outline-none"
+                />
+                <span className="text-xs text-gray-400 shrink-0">{to12Hour(form.cutoffTime)}</span>
               </div>
+              <p className="mt-1 text-xs text-gray-400">Users cannot change attendance after this time</p>
             </div>
+
           </div>
+
+          {/* Allow Dish Requests */}
           <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-4">
             <div className="flex items-start gap-3 min-w-0">
               <img src={messageSquareIcon} alt="dish requests" className="mt-0.5 h-5 w-5 opacity-50 shrink-0" />
@@ -208,14 +246,22 @@ export default function Settings() {
               </div>
             </div>
             <div className="ml-4 shrink-0">
-              <Toggle enabled={allowDishRequests} onToggle={() => setAllowDishRequests((v) => !v)} />
+              <Toggle
+                enabled={form.allowDishRequests}
+                onToggle={() => setForm((p) => ({ ...p, allowDishRequests: !p.allowDishRequests }))}
+              />
             </div>
           </div>
         </section>
 
-        {/* ── Notifications (local) ── */}
+        {/* ── Notifications (local only) ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
-          <SectionHeader icon={bellIcon} iconBg="bg-indigo-100" title="Notifications" description="Control how and when administrators receive platform updates." />
+          <SectionHeader
+            icon={bellIcon}
+            iconBg="bg-indigo-100"
+            title="Notifications"
+            description="Control how and when administrators receive platform updates."
+          />
           <div className="space-y-5">
             {[
               { checked: emailAlerts, toggle: () => setEmailAlerts((v) => !v), label: "Email Alerts",        sub: "Receive weekly billing and summary reports via email." },
@@ -233,9 +279,14 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* ── Security (local) ── */}
+        {/* ── Security (local only) ── */}
         <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
-          <SectionHeader icon={shieldIcon} iconBg="bg-red-100" title="Security" description="Manage access credentials and multi-factor authentication." />
+          <SectionHeader
+            icon={shieldIcon}
+            iconBg="bg-red-100"
+            title="Security"
+            description="Manage access credentials and multi-factor authentication."
+          />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 w-full sm:w-auto justify-center sm:justify-start">
               <img src={lockReset} alt="key" className="h-4 w-4 opacity-60 shrink-0" />

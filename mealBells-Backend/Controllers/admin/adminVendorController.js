@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
-import { generateVendorId } from "../utils/generateVendorId.js";
-import { userModel } from "../Models/user.js";
+import { generateVendorId } from "../../utils/generateVendorId.js";
+import { userModel } from "../../Models/user.js";
 
 export const addVendor = async (req, res) => {
   try {
@@ -27,6 +27,7 @@ export const addVendor = async (req, res) => {
 
     const vendor = await userModel.create({
       type: "vendor",
+      role: "Vendor",
       name,
       email,
       phone: phone || "",

@@ -4,11 +4,11 @@ import { ensureJwtValidation } from "../MiddleWare/jwtVerify.js";
 import {
   addUser, getUsers, getUserById,
   updateUser, deleteUser, toggleUserStatus,
-} from "../Controllers/adminUserController.js";
-import { addVendor, getVendors, toggleVendorStatus, updateVendor } from "../Controllers/adminVendorController.js";
+} from "../Controllers/admin/adminUserController.js";
+import { addVendor, getVendors, toggleVendorStatus, updateVendor } from "../Controllers/admin/adminVendorController.js";
 import {
   addDish, getDishes, getDishById, updateDish, deleteDish, getSchedules,
-} from "../Controllers/adminDishController.js";
+} from "../Controllers/admin/adminDishController.js";
 import { uplode } from "../utils/multer.js";
 
 const router = Router();

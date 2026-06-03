@@ -46,6 +46,8 @@ import RequestedDishes from "./pages/vendor/RequestedDishes";
 import DeliveryStatusVendor from "./pages/vendor/DeliveryStatusVendor";
 import VendorReviews from "./pages/vendor/VendorReviews";
 import ReviewDetail from "./pages/vendor/ReviewDetail";
+import VendorReport from "./pages/vendor/VendorReport";
+import VendorSettings from "./pages/vendor/VendorSettings";
 
 
 
@@ -151,8 +153,8 @@ function App() {
              <Route path="/vendor/delivery" element={<DeliveryStatusVendor />} /> 
               {<Route path="/vendor/reviews"  element={<VendorReviews />} /> }
               <Route path="/vendor/reviews/:id" element={<ReviewDetail />} />
-              {/* <Route path="/vendor/reports"  element={<VendorReports />} /> */}
-              {/* <Route path="/vendor/settings" element={<VendorSettings />} /> */}
+              <Route path="/vendor/reports"  element={<VendorReport />} /> 
+               <Route path="/vendor/settings" element={<VendorSettings />}/>
             </Route>
           </Routes>
 

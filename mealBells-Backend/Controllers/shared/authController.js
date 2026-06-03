@@ -1,13 +1,13 @@
-// Controllers/authController.js  (login + signup updated)
-import { userModel } from "../Models/user.js";
+// Controllers/authController.js
+import { userModel } from "../../Models/user.js";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure:   process.env.NODE_ENV === 'production',
   sameSite: 'strict',
-  maxAge: 24 * 60 * 60 * 1000,
+  maxAge:   24 * 60 * 60 * 1000,
 };
 
 export const signUp = async (req, res) => {
@@ -24,7 +24,12 @@ export const signUp = async (req, res) => {
     await newUser.save();
 
     const token = jwt.sign(
-      { email: newUser.email, id: newUser._id, organizationId: newUser.organizationId },
+      {
+        email:          newUser.email,
+        id:             newUser._id,
+        organizationId: newUser.organizationId,
+        type:           newUser.type,           // ← added
+      },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -54,7 +59,12 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { email: user.email, id: user._id, organizationId: user.organizationId },
+      {
+        email:          user.email,
+        id:             user._id,
+        organizationId: user.organizationId,
+        type:           user.type,              // ← added
+      },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
