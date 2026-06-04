@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateMe, logoutUser } from "../../slices/authSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 import {
-  ChevronLeft, ChevronRight, User, Lock, Bell,
+  ChevronLeft, ChevronRight, User, Lock,
   Salad, LogOut, Camera, Eye, EyeOff, Check,
   Save, Loader2,
 } from "lucide-react";

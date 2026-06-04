@@ -7,8 +7,8 @@ import {
 import type { AppDispatch, RootState } from "../../app/store";
 import type { VendorDishRequest } from "../../slices/dishRequestSlice";
 import {
-  Leaf, Drumstick, Salad, Flame, Wind, Zap,
-  CalendarDays, CheckCircle2, XCircle, AlertCircle,
+   Flame, Wind, Zap,
+   CheckCircle2, XCircle, AlertCircle,
   RefreshCw, Clock,
 } from "lucide-react";
 

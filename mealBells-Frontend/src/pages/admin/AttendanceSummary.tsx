@@ -16,7 +16,6 @@ import {
   cacheKey,
 } from "../../slices/adminAnalyticsSlice";
 import { DEPARTMENTS } from "../../data/UserManagement";
-import type { AnalyticsFilters } from "../../slices/adminAnalyticsSlice";
 
 const MEAL_TYPES    = ["Veg", "Non-Veg", "Both"];
 const ROWS_PER_PAGE = 7;

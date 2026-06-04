@@ -8,7 +8,7 @@ import userReducer              from "../slices/userSlice";
 import deliveryReducer          from "../slices/deliverySlice";
 import analyticsReducer         from "../slices/adminAnalyticsSlice";
 import vendorPerformanceReducer from "../slices/vendorPerformanceSlice";
-import dishRequestReducer       from "../slices/Dishrequestslice";
+import dishRequestReducer       from "../slices/dishRequestSlice";
 
 export const store = configureStore({
   reducer: {

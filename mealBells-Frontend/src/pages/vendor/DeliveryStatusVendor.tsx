@@ -45,17 +45,6 @@ function parseDeliveryWindow(timing: string | undefined | null): {
   return { start, end, label: timing };
 }
 
-/** Returns true when current time is AFTER the window end. */
-function isWindowClosed(window: { end: Date } | null): boolean {
-  if (!window) return false;
-  return new Date() > window.end;
-}
-
-/** Returns true when current time is BEFORE the window start. */
-function isWindowNotStarted(window: { start: Date } | null): boolean {
-  if (!window) return false;
-  return new Date() < window.start;
-}
 
 /** Human-readable countdown or elapsed string. */
 function useWindowStatus(window: { start: Date; end: Date } | null) {

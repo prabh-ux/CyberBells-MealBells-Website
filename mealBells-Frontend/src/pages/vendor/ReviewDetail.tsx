@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Star,
   BadgeCheck,
@@ -16,15 +15,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../app/store';
 
-// Maps a 0–5 score to a Tailwind width class for the progress bar
-const widthMap: Record<number, string> = {
-  0: 'w-0',
-  1: 'w-1/5',
-  2: 'w-2/5',
-  3: 'w-3/5',
-  4: 'w-4/5',
-  5: 'w-full',
-};
+
 
 // Half-star component for fractional ratings
 const StarRow = ({ rating }: { rating: number }) => {
