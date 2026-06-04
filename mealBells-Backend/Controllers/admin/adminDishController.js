@@ -1,8 +1,9 @@
 import { dishModel }    from "../../Models/dish.js";
 import { userModel }    from "../../Models/user.js";
 import { MenuSchedule } from "../../Models/menuSchedule.js";
+import { logActivity }  from "../../utils/logActivity.js";
 
-// ── Shared: core field update for a dish document ─────────────────────────────
+// ── Shared: apply core field updates ─────────────────────────────────────────
 export const applyDishUpdates = async (dishId, body, file) => {
   const fields = [
     "name", "dishType", "description", "ingredients",
@@ -10,7 +11,7 @@ export const applyDishUpdates = async (dishId, body, file) => {
     "availability", "qualityScore", "prepTime",
   ];
   const updates = {};
-  fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
+  fields.forEach((f) => { if (body[f] !== undefined) updates[f] = body[f]; });
   if (file?.path) updates.image = file.path;
 
   return dishModel.findByIdAndUpdate(dishId, { $set: updates }, { new: true }).lean();
@@ -21,14 +22,12 @@ export const addDish = async (req, res) => {
   try {
     const {
       name, dishType, description, ingredients,
-      vendor, availability,
-      qualityScore, estimatedCalories, prepTime,
-      scheduledDate,
+      vendor, availability, qualityScore,
+      estimatedCalories, prepTime, scheduledDate,
     } = req.body;
 
-    if (!name?.trim()) {
+    if (!name?.trim())
       return res.status(400).json({ success: false, msg: "Dish name is required" });
-    }
 
     let vendorId = null;
     if (vendor && vendor !== "All Vendors") {
@@ -50,9 +49,17 @@ export const addDish = async (req, res) => {
       prepTime:          prepTime          || "20 mins",
     });
 
+    await logActivity({
+      userId: req.user.id,
+      name:   req.user.name ?? "Admin",
+      email:  req.user.email ?? "",
+      action: `Dish Added: ${dish.name}`,
+      status: "Success",
+    });
+
     let schedule = null;
     if (scheduledDate) {
-      const dayStart = new Date(scheduledDate); dayStart.setHours(0, 0, 0, 0);
+      const dayStart = new Date(scheduledDate); dayStart.setHours(0,  0,  0,   0);
       const dayEnd   = new Date(scheduledDate); dayEnd.setHours(23, 59, 59, 999);
 
       const conflict = await MenuSchedule.findOne({
@@ -73,6 +80,14 @@ export const addDish = async (req, res) => {
         dish:          dish._id,
         scheduledDate: new Date(scheduledDate),
         scheduledBy:   req.user.id,
+      });
+
+      await logActivity({
+        userId: req.user.id,
+        name:   req.user.name ?? "Admin",
+        email:  req.user.email ?? "",
+        action: `Dish Scheduled: ${dish.name}`,
+        status: "Success",
       });
     }
 
@@ -132,7 +147,6 @@ export const updateDish = async (req, res) => {
     const existing = await dishModel.findById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, msg: "Dish not found" });
 
-    // resolve vendor change if provided
     if (req.body.vendor !== undefined) {
       if (!req.body.vendor || req.body.vendor === "All Vendors") {
         req.body.vendor = null;
@@ -143,9 +157,8 @@ export const updateDish = async (req, res) => {
       }
     }
 
-    // handle schedule conflict if scheduledDate provided
     if (req.body.scheduledDate) {
-      const dayStart = new Date(req.body.scheduledDate); dayStart.setHours(0, 0, 0, 0);
+      const dayStart = new Date(req.body.scheduledDate); dayStart.setHours(0,  0,  0,   0);
       const dayEnd   = new Date(req.body.scheduledDate); dayEnd.setHours(23, 59, 59, 999);
 
       const conflict = await MenuSchedule.findOne({
@@ -154,8 +167,17 @@ export const updateDish = async (req, res) => {
       });
 
       if (conflict) {
-        const updated = await applyDishUpdates(req.params.id, req.body, req.file);
+        const updated   = await applyDishUpdates(req.params.id, req.body, req.file);
         const populated = await dishModel.findById(updated._id).populate("vendor", "name email");
+
+        await logActivity({
+          userId: req.user.id,
+          name:   req.user.name ?? "Admin",
+          email:  req.user.email ?? "",
+          action: `Dish Updated: ${populated.name}`,
+          status: "Pending",
+        });
+
         return res.status(409).json({
           success:       false,
           msg:           "Dish updated but another dish is already scheduled on this date",
@@ -177,6 +199,15 @@ export const updateDish = async (req, res) => {
 
     const updated   = await applyDishUpdates(req.params.id, req.body, req.file);
     const populated = await dishModel.findById(updated._id).populate("vendor", "name email");
+
+    await logActivity({
+      userId: req.user.id,
+      name:   req.user.name ?? "Admin",
+      email:  req.user.email ?? "",
+      action: `Dish Updated: ${populated.name}`,
+      status: "Success",
+    });
+
     return res.status(200).json({ success: true, msg: "Dish updated successfully", dish: populated });
   } catch (err) {
     console.error("Update dish error:", err);
@@ -191,6 +222,14 @@ export const deleteDish = async (req, res) => {
     if (!dish) return res.status(404).json({ success: false, msg: "Dish not found" });
 
     await MenuSchedule.deleteOne({ dish: req.params.id });
+
+    await logActivity({
+      userId: req.user.id,
+      name:   req.user.name ?? "Admin",
+      email:  req.user.email ?? "",
+      action: `Dish Deleted: ${dish.name}`,
+      status: "Critical",
+    });
 
     return res.status(200).json({ success: true, msg: "Dish deleted successfully" });
   } catch (err) {
@@ -209,7 +248,7 @@ export const getSchedules = async (req, res) => {
       })
       .sort({ scheduledDate: -1 });
 
-    const valid = schedules.filter(s => s.dish != null);
+    const valid = schedules.filter((s) => s.dish != null);
 
     return res.status(200).json({ success: true, schedules: valid });
   } catch (err) {

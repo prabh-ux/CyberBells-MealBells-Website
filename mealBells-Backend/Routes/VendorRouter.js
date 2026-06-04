@@ -16,7 +16,11 @@ import {
   createVendorSchedule,
 } from "../Controllers/vendor/vendorMenuController.js";
 import { getTodayDelivery, advanceDeliveryStatus }   from "../Controllers/shared/deliveryController.js";
-
+import {
+  getVendorDishRequests,
+  respondToDishRequest,
+} from "../Controllers/vendor/vendorDishRequestController.js";
+ 
 const router = Router();
 
 const upload = (fieldName) => (req, res, next) => {
@@ -54,4 +58,7 @@ router.put("/delivery/:deliveryId/advance", advanceDeliveryStatus);
 // ── Reviews ────────────────────────────────────────────────────────────────
 router.get("/reviews", getVendorReviews);
 
+//requested dishes
+router.get  ("/dish-requests",                getVendorDishRequests);
+router.patch("/dish-requests/:id/respond",    respondToDishRequest);
 export default router;

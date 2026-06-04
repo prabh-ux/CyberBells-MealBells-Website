@@ -226,7 +226,7 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
 const MENU_ITEMS: { page: Page; label: string; desc: string; icon: React.FC<{ className?: string }> }[] = [
   { page: "edit",          label: "Edit Profile",          desc: "Update your name, email & photo",  icon: User  },
   { page: "password",      label: "Change Password",       desc: "Update your login credentials",    icon: Lock  },
-  { page: "notifications", label: "Notification Settings", desc: "Manage your alert preferences",    icon: Bell  },
+  // { page: "notifications", label: "Notification Settings", desc: "Manage your alert preferences",    icon: Bell  },
   { page: "dietary",       label: "Dietary Preferences",   desc: "Veg / Non-veg, allergies & spice", icon: Salad },
 ];
 

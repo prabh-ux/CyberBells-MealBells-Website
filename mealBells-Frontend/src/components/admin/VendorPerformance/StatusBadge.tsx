@@ -1,10 +1,15 @@
+// components/admin/VendorPerformance/StatusBadge.tsx
 
-const StatusBadge = ({ delayed, status }: { delayed: boolean; status: string }) => (
+interface Props { onTime: boolean }
+
+const StatusBadge = ({ onTime }: Props) => (
   <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${
-    delayed ? "bg-[#FFEDD5] text-[#C2410C]" : "bg-[#D1FAE5] text-[#047857]"
+    onTime
+      ? "bg-[#D1FAE5] text-[#047857]"
+      : "bg-[#FFEDD5] text-[#C2410C]"
   }`}>
-    {status}
+    {onTime ? "On Time" : "Delayed"}
   </span>
 );
 
-export default StatusBadge
+export default StatusBadge;

@@ -15,7 +15,7 @@ function barColor(count: number, max: number) {
 const RoundedBar = (props: any) => {
   const { x, y, width, height, fill } = props;
   if (!height || height <= 0) return null;
-  const radius = Math.min(8, height); // ← clamp radius to height
+  const radius = Math.min(8, height);
   return (
     <path
       d={`M${x + radius},${y} h${width - 2 * radius} a${radius},${radius} 0 0 1 ${radius},${radius} v${height - radius} h-${width} v-${height - radius} a${radius},${radius} 0 0 1 ${radius},-${radius}z`}
@@ -38,12 +38,13 @@ const RANGE_OPTIONS = ["Last 7 Days", "Last 14 Days", "Last 30 Days"];
 
 interface Props {
   mealsData: { day: string; count: number }[];
-  mealsMax: number;
+  mealsMax:  number;
   mealRange: string;
+  loading:   boolean;   // ← added
   onRangeChange: (range: string) => void;
 }
 
-const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, onRangeChange }: Props) => {
+const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, loading, onRangeChange }: Props) => {
   return (
     <div className="bg-white rounded-2xl p-4 sm:p-6">
       <div className="flex flex-col min-[480px]:flex-row min-[480px]:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-3">
@@ -53,8 +54,9 @@ const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, onRangeC
         <div className="relative shrink-0">
           <select
             value={mealRange}
+            disabled={loading}
             onChange={(e) => onRangeChange(e.target.value)}
-            className="appearance-none border border-[#E5E7EB] rounded-xl px-3 py-1.5 pr-7 text-[12px] sm:text-[14px] text-(--text-primary) font-medium focus:outline-none bg-white cursor-pointer"
+            className="appearance-none border border-[#E5E7EB] rounded-xl px-3 py-1.5 pr-7 text-[12px] sm:text-[14px] text-(--text-primary) font-medium focus:outline-none bg-white cursor-pointer disabled:opacity-50"
           >
             {RANGE_OPTIONS.map((opt) => <option key={opt}>{opt}</option>)}
           </select>
@@ -63,18 +65,32 @@ const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, onRangeC
           </span>
         </div>
       </div>
+
       <div style={{ height: 180 }} className="sm:!h-[220px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={mealsData} barCategoryGap="20%" barGap={4}>
-            <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#9CA3AF", fontSize: 10, fontWeight: 500 }} />
-            <Tooltip content={<BarTooltipContent />} cursor={{ fill: "rgba(255,122,0,0.05)" }} />
-            <Bar dataKey="count" shape={<RoundedBar />} radius={[8, 8, 0, 0]}>
-              {mealsData.map((entry, index) => (
-                <Cell key={index} fill={barColor(entry.count, mealsMax)} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        {loading ? (
+          /* ── Skeleton bars ── */
+          <div className="flex items-end justify-around w-full h-full pb-5 gap-1">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-t-lg bg-[#F3F4F6] animate-pulse"
+                style={{ height: `${40 + Math.random() * 50}%` }}
+              />
+            ))}
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={mealsData} barCategoryGap="20%" barGap={4}>
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#9CA3AF", fontSize: 10, fontWeight: 500 }} />
+              <Tooltip content={<BarTooltipContent />} cursor={{ fill: "rgba(255,122,0,0.05)" }} />
+              <Bar dataKey="count" shape={<RoundedBar />} radius={[8, 8, 0, 0]}>
+                {mealsData.map((entry, index) => (
+                  <Cell key={index} fill={barColor(entry.count, mealsMax)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

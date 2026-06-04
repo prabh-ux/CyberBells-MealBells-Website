@@ -37,6 +37,7 @@ import MyConsumptionReport from "./pages/user/MyConsumptionReport";
 import Profile from "./pages/user/Profile";
 import Notifications from "./pages/user/Notifications";
 import Login from "./pages/auth/Login";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import TodayMenu from "./pages/vendor/TodayMenu";
@@ -48,7 +49,7 @@ import VendorReviews from "./pages/vendor/VendorReviews";
 import ReviewDetail from "./pages/vendor/ReviewDetail";
 import VendorReport from "./pages/vendor/VendorReport";
 import VendorSettings from "./pages/vendor/VendorSettings";
-
+import RequestedDishesByUsers from './pages/admin/RequestedDishesByUsers'
 
 
 function App() {
@@ -106,6 +107,7 @@ function App() {
             <Route element={<ProtectedRoute redirectIfAuthed />}>
               <Route path="/login"  element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+               <Route path="/forgot-password" element={<ForgotPassword />} />
             </Route>
 
             {/* Admin — protected */}
@@ -114,6 +116,7 @@ function App() {
               <Route path="/admin/dashboard"                    element={<AnalyticsDashboard />} />
               <Route path="/admin/profile"                      element={<ProfileSettings />} />
               <Route path="/admin/users"                        element={<UserManagement />} />
+              <Route path="/admin/requested-dishes"              element={<RequestedDishesByUsers />} />
               <Route path="/admin/add-user"                     element={<AddUser />} />
               <Route path="/admin/vendors"                      element={<VendorManagement />} />
               <Route path="/admin/add-vendor"                   element={<AddVendor />} />

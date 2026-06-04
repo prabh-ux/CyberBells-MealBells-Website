@@ -1,46 +1,51 @@
-import { userModel } from "../../Models/user.js";
-import bcrypt        from "bcrypt";
-import cloudinary    from "../../utils/cloudnary.js";
+import { userModel }   from "../../Models/user.js";
+import bcrypt          from "bcrypt";
+import cloudinary      from "../../utils/cloudnary.js";
+import { logActivity } from "../../utils/logActivity.js";
 
-// ── Add User ─────────────────────────────────────────────────────────────────
+// ── Add User ──────────────────────────────────────────────────────────────────
 export const addUser = async (req, res) => {
   try {
     const { fullName, email, phone, gender, department, role, active } = req.body;
 
-    if (!fullName || !email) {
+    if (!fullName || !email)
       return res.status(400).json({ msg: "Full name and email are required" });
-    }
 
     const existing = await userModel.findOne({ email });
-    if (existing) {
+    if (existing)
       return res.status(409).json({ msg: "Email already in use" });
-    }
 
     const avatarUrl      = req.file?.path     || "";
     const avatarPublicId = req.file?.filename || "";
-
-    console.log("Uploaded file:", req.file ?? "no file uploaded");
 
     const tempPassword = Math.random().toString(36).slice(-8);
     const hashed       = await bcrypt.hash(tempPassword, 10);
 
     const user = await userModel.create({
-      type:            "user",
-      name:            fullName,
+      type:       "user",
+      name:       fullName,
       email,
-      phone:           phone      || "",
-      gender:          gender     || "",
-      department:      department || "",
-      role:            role       || "Standard User",
-      active:          active === "false" ? false : true,
-      avatar:          avatarUrl,
+      phone:      phone      || "",
+      gender:     gender     || "",
+      department: department || "",
+      role:       role       || "Standard User",
+      active:     active === "false" ? false : true,
+      avatar:     avatarUrl,
       avatarPublicId,
-      password:        hashed,
+      password:   hashed,
+    });
+
+    await logActivity({
+      userId: user._id,
+      name:   user.name,
+      email:  user.email,
+      action: "New User Registered",
+      status: "Success",
     });
 
     return res.status(201).json({
-      success:      true,
-      msg:          "User created successfully",
+      success: true,
+      msg:     "User created successfully",
       tempPassword,
       user: {
         _id:        user._id,
@@ -68,14 +73,20 @@ export const toggleUserStatus = async (req, res) => {
     const user = await userModel.findById(req.params.id);
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    // Use the current status sent from the client, then flip it
-    // Falls back to DB value if body is missing (safe default)
     const currentActive = req.body.active ?? user.active;
     const newActive     = !currentActive;
 
     const updated = await userModel
       .findByIdAndUpdate(req.params.id, { active: newActive }, { new: true })
       .select("-password -avatarPublicId");
+
+    await logActivity({
+      userId: updated._id,
+      name:   updated.name,
+      email:  updated.email,
+      action: newActive ? "User Activated" : "User Deactivated",
+      status: "Success",
+    });
 
     return res.status(200).json({
       success: true,
@@ -145,18 +156,26 @@ export const updateUser = async (req, res) => {
     const updated = await userModel.findByIdAndUpdate(
       req.params.id,
       {
-        name:       fullName   || user.name,
-        email:      email      || user.email,
-        phone:      phone      ?? user.phone,
-        gender:     gender     ?? user.gender,
-        department: department ?? user.department,
-        role:       role       ?? user.role,
-        active:     active !== undefined ? active === "false" ? false : true : user.active,
-        avatar:     avatarUrl,
+        name:          fullName   || user.name,
+        email:         email      || user.email,
+        phone:         phone      ?? user.phone,
+        gender:        gender     ?? user.gender,
+        department:    department ?? user.department,
+        role:          role       ?? user.role,
+        active:        active !== undefined ? active === "false" ? false : true : user.active,
+        avatar:        avatarUrl,
         avatarPublicId,
       },
       { new: true }
     ).select("-password -avatarPublicId");
+
+    await logActivity({
+      userId: updated._id,
+      name:   updated.name,
+      email:  updated.email,
+      action: "User Profile Updated",
+      status: "Success",
+    });
 
     return res.status(200).json({ success: true, msg: "User updated successfully", user: updated });
   } catch (err) {
@@ -174,6 +193,14 @@ export const deleteUser = async (req, res) => {
     if (user.avatarPublicId) {
       await cloudinary.uploader.destroy(user.avatarPublicId);
     }
+
+    await logActivity({
+      userId: user._id,
+      name:   user.name,
+      email:  user.email,
+      action: "User Deleted",
+      status: "Critical",
+    });
 
     await userModel.findByIdAndDelete(req.params.id);
 

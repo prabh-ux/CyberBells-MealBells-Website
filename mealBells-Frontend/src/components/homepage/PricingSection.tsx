@@ -1,6 +1,9 @@
+import { useScrollReveal } from "../../utils/useScrollReveal";
 import tick from "../../assets/tick.png";
 
 function PricingSection() {
+  const { ref: sectionRef, isVisible } = useScrollReveal<HTMLElement>();
+
   const plans = [
     {
       name: 'Basic',
@@ -39,13 +42,21 @@ function PricingSection() {
       cta: 'Contact Sales',
       popular: false,
     },
-  ]
+  ];
 
   return (
-    <section className="w-full bg-[#F9F9F9] px-[clamp(1rem,4vw,12rem)] py-[clamp(3rem,5vw,12rem)]">
-
+    <section
+      ref={sectionRef}
+      className="w-full bg-[#F9F9F9] px-[clamp(1rem,4vw,12rem)] py-[clamp(3rem,5vw,12rem)]"
+    >
       {/* Heading */}
-      <div className="flex flex-col items-center gap-[clamp(0.75rem,1vw,2rem)] mb-[clamp(2.5rem,4vw,8rem)] mx-auto max-w-[7680px]">
+      <div
+        className={`
+          flex flex-col items-center gap-[clamp(0.75rem,1vw,2rem)] mb-[clamp(2.5rem,4vw,8rem)] mx-auto max-w-[7680px]
+          transition-all duration-700 ease-out
+          ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}
+        `}
+      >
         <h2
           style={{ fontFamily: "var(--font-manrope)", color: "var(--text-primary)" }}
           className="text-[clamp(1.5rem,2.5vw,5rem)] font-bold text-center"
@@ -62,15 +73,23 @@ function PricingSection() {
 
       {/* Cards */}
       <div className="mx-auto max-w-[7680px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[clamp(1.25rem,2vw,4rem)] items-stretch">
-        {plans.map((plan) => (
+        {plans.map((plan, i) => (
           <div
             key={plan.name}
-            style={{ fontFamily: "var(--font-inter)" }}
-            className={`relative bg-white rounded-[clamp(1rem,1.2vw,2.5rem)] p-[clamp(1.5rem,2.5vw,5rem)] flex flex-col gap-[clamp(2rem,3vw,6rem)] ${
-              plan.popular
-                ? 'border-2 border-[var(--brand)] shadow-md'
-                : 'border border-gray-100 shadow-sm'
-            }`}
+            style={{ fontFamily: "var(--font-inter)",transitionDelay: `${150 + i * 150}ms` }}
+            className={`
+              relative bg-white rounded-[clamp(1rem,1.2vw,2.5rem)]
+              p-[clamp(1.5rem,2.5vw,5rem)]
+              flex flex-col gap-[clamp(2rem,3vw,6rem)]
+              transition-all duration-700 ease-out
+              hover:-translate-y-3 hover:shadow-2xl
+              ${plan.popular
+                ? 'border-2 border-[var(--brand)] shadow-md hover:shadow-orange-200/40'
+                : 'border border-gray-100 shadow-sm hover:border-orange-200/50'
+              }
+              ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-14'}
+            `}
+           
           >
             {/* Most Popular Badge */}
             {plan.popular && (
@@ -123,20 +142,23 @@ function PricingSection() {
             {/* CTA Button */}
             <button
               type="button"
-              className={`w-full py-[clamp(0.75rem,1vw,2rem)] rounded-[clamp(0.75rem,1vw,1.5rem)] text-[clamp(0.8rem,1vw,2rem)] font-semibold transition-all duration-200 mt-auto ${
-                plan.popular
-                  ? 'bg-orange-500 text-white hover:bg-orange-600'
-                  : 'bg-white text-[var(--text-primary)] border border-[#8C7263] hover:bg-gray-50'
-              }`}
+              className={`
+                w-full py-[clamp(0.75rem,1vw,2rem)] rounded-[clamp(0.75rem,1vw,1.5rem)]
+                text-[clamp(0.8rem,1vw,2rem)] font-semibold
+                transition-all duration-300 mt-auto
+                ${plan.popular
+                  ? 'bg-orange-500 text-white hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5 active:translate-y-0'
+                  : 'bg-white text-[var(--text-primary)] border border-[#8C7263] hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600'
+                }
+              `}
             >
               {plan.cta}
             </button>
           </div>
         ))}
       </div>
-
     </section>
-  )
+  );
 }
 
-export default PricingSection
+export default PricingSection;

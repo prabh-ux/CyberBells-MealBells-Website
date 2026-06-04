@@ -1,9 +1,12 @@
+import { useScrollReveal } from "../../utils/useScrollReveal";
 import calander from '../../assets/calander.png';
 import attendence from '../../assets/attendence.png';
 import attendence2 from '../../assets/attendence2.png';
 import star from '../../assets/star.png';
 
 function FeaturesSection() {
+  const { ref: sectionRef, isVisible } = useScrollReveal<HTMLElement>();
+
   const features = [
     {
       icon: calander,
@@ -29,18 +32,38 @@ function FeaturesSection() {
       title: 'Ratings & Reviews',
       description: 'Gather immediate feedback on food quality to maintain high catering standards.',
     },
-  ]
+  ];
 
   return (
-    <section className="w-full bg-gray-50 px-[clamp(1rem,4vw,12rem)] py-[clamp(2.5rem,4vw,10rem)]">
+    <section
+      ref={sectionRef}
+      className="w-full bg-gray-50 px-[clamp(1rem,4vw,12rem)] py-[clamp(2.5rem,4vw,10rem)]"
+    >
       <div className="mx-auto max-w-[7680px] grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-[clamp(1rem,1.5vw,3rem)]">
-        {features.map((feature) => (
+        {features.map((feature, i) => (
           <div
             key={feature.title}
-            className="bg-white rounded-[clamp(1rem,1.2vw,2rem)] p-[clamp(1.25rem,2vw,4rem)] flex flex-col gap-[clamp(1rem,1.2vw,2.5rem)] border border-gray-100 shadow-sm"
+            className={`
+              group bg-white rounded-[clamp(1rem,1.2vw,2rem)]
+              p-[clamp(1.25rem,2vw,4rem)]
+              flex flex-col gap-[clamp(1rem,1.2vw,2.5rem)]
+              border border-gray-100 shadow-sm
+              transition-all duration-500 ease-out
+              hover:-translate-y-2 hover:shadow-xl hover:border-orange-200/50
+              ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}
+            `}
+            style={{ transitionDelay: `${i * 120}ms` }}
           >
             {/* Icon Box */}
-            <div className={`w-[clamp(3rem,4vw,8rem)] h-[clamp(3rem,4vw,8rem)] rounded-[clamp(0.75rem,1vw,1.5rem)] flex items-center justify-center ${feature.iconBg}`}>
+            <div
+              className={`
+                w-[clamp(3rem,4vw,8rem)] h-[clamp(3rem,4vw,8rem)]
+                rounded-[clamp(0.75rem,1vw,1.5rem)]
+                flex items-center justify-center ${feature.iconBg}
+                transition-transform duration-500 ease-out
+                group-hover:scale-110 group-hover:rotate-3
+              `}
+            >
               <img
                 src={feature.icon}
                 alt={feature.title}
@@ -67,7 +90,7 @@ function FeaturesSection() {
         ))}
       </div>
     </section>
-  )
+  );
 }
 
-export default FeaturesSection
+export default FeaturesSection;

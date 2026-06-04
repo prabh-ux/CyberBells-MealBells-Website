@@ -1,3 +1,4 @@
+import { useScrollReveal } from "../../utils/useScrollReveal";
 import solutionImage1 from "../../assets/solutionImage1.png";
 import solutionImage2 from "../../assets/solutionImage2.png";
 import solutionImage3 from "../../assets/solutionImage3.png";
@@ -7,12 +8,24 @@ import dowload from "../../assets/dowload.png";
 import playstore from "../../assets/playstore.png";
 
 function SolutionsSection() {
+  const { ref: sectionRef, isVisible } = useScrollReveal<HTMLElement>();
+
   return (
-    <section className="w-full bg-white px-[clamp(1rem,4vw,12rem)] py-[clamp(3rem,5vw,12rem)] flex flex-col gap-[clamp(3.5rem,6vw,14rem)]">
+    <section
+      ref={sectionRef}
+      className="w-full bg-white px-[clamp(1rem,4vw,12rem)] py-[clamp(3rem,5vw,12rem)] flex flex-col gap-[clamp(3.5rem,6vw,14rem)]"
+    >
       <div className="mx-auto w-full max-w-[7680px] flex flex-col gap-[clamp(3.5rem,6vw,14rem)]">
 
         {/* Row 1 — Text Left, Image Right */}
-        <div className="flex flex-col lg:flex-row items-center gap-[clamp(2.5rem,4vw,10rem)]">
+        <div
+          className={`
+            flex flex-col lg:flex-row items-center gap-[clamp(2.5rem,4vw,10rem)]
+            transition-all duration-700 ease-out
+            ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}
+          `}
+          style={{ transitionDelay: '100ms' }}
+        >
           <div className="flex flex-col gap-[clamp(1.25rem,1.5vw,3rem)] w-full lg:max-w-[45%]">
             <span
               style={{ fontFamily: "var(--font-manrope)", color: "var(--brand)" }}
@@ -49,17 +62,30 @@ function SolutionsSection() {
             </ul>
           </div>
 
-          <div className="w-full lg:flex-1">
-            <div className="bg-gray-100 rounded-[clamp(1rem,1.5vw,3rem)] p-[clamp(1rem,1.5vw,3rem)] flex items-center justify-center">
-              <img src={solutionImage1} alt="Admin dashboard" className="w-full h-auto object-cover rounded-[clamp(0.75rem,1vw,2rem)]" />
-            </div>
+          <div className="w-full lg:flex-1 overflow-hidden rounded-[clamp(1rem,1.5vw,3rem)]">
+            <img
+              src={solutionImage1}
+              alt="Admin dashboard"
+              className="w-full h-auto object-cover rounded-[clamp(0.75rem,1vw,2rem)] transition-transform duration-700 hover:scale-105"
+            />
           </div>
         </div>
 
         {/* Row 2 — Image Left, Text Right */}
-        <div className="flex flex-col-reverse lg:flex-row items-center gap-[clamp(2.5rem,4vw,10rem)]">
-          <div className="w-full lg:flex-1">
-            <img src={solutionImage2} alt="Vendor integration" className="w-full h-auto object-cover rounded-[clamp(0.75rem,1vw,2rem)]" />
+        <div
+          className={`
+            flex flex-col-reverse lg:flex-row items-center gap-[clamp(2.5rem,4vw,10rem)]
+            transition-all duration-700 ease-out
+            ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}
+          `}
+          style={{ transitionDelay: '250ms' }}
+        >
+          <div className="w-full lg:flex-1 overflow-hidden rounded-[clamp(1rem,1.5vw,3rem)]">
+            <img
+              src={solutionImage2}
+              alt="Vendor integration"
+              className="w-full h-auto object-cover rounded-[clamp(0.75rem,1vw,2rem)] transition-transform duration-700 hover:scale-105"
+            />
           </div>
 
           <div className="flex flex-col gap-[clamp(1.25rem,1.5vw,3rem)] w-full lg:max-w-[45%]">
@@ -86,16 +112,23 @@ function SolutionsSection() {
             <a
               style={{ fontFamily: "var(--font-inter)", color: "var(--brand)" }}
               href="#"
-              className="flex items-center gap-[clamp(0.25rem,0.5vw,1rem)] text-[clamp(0.8rem,1vw,2rem)] font-bold hover:underline w-fit"
+              className="group flex items-center gap-[clamp(0.25rem,0.5vw,1rem)] text-[clamp(0.8rem,1vw,2rem)] font-bold hover:underline w-fit"
             >
               Learn about vendor portals
-              <img src={linkarrow} alt="arrow" className="w-[clamp(1rem,1.2vw,2.5rem)] h-[clamp(1rem,1.2vw,2.5rem)]" />
+              <img src={linkarrow} alt="arrow" className="w-[clamp(1rem,1.2vw,2.5rem)] h-[clamp(1rem,1.2vw,2.5rem)] transition-transform duration-300 group-hover:translate-x-1" />
             </a>
           </div>
         </div>
 
-        {/* Row 3 — Text Left, Image Right (natural size) */}
-        <div className="flex flex-col lg:flex-row items-center gap-[clamp(2.5rem,4vw,10rem)]">
+        {/* Row 3 — Text Left, Image Right */}
+        <div
+          className={`
+            flex flex-col lg:flex-row items-center gap-[clamp(2.5rem,4vw,10rem)]
+            transition-all duration-700 ease-out
+            ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}
+          `}
+          style={{ transitionDelay: '400ms' }}
+        >
           <div className="flex flex-col gap-[clamp(1.25rem,1.5vw,3rem)] w-full lg:max-w-[45%]">
             <span
               style={{ fontFamily: "var(--font-manrope)" }}
@@ -118,15 +151,17 @@ function SolutionsSection() {
               taps. Never miss a meal or a menu change again.
             </p>
             <div className="flex items-center gap-[clamp(0.5rem,0.8vw,1.5rem)] mt-1">
-              <img src={dowload} alt="App Store" className="w-[clamp(2.5rem,3vw,6rem)] h-[clamp(2.5rem,3vw,6rem)]" />
-              <img src={playstore} alt="Google Play" className="w-[clamp(2.5rem,3vw,6rem)] h-[clamp(2.5rem,3vw,6rem)]" />
+              <img src={dowload} alt="App Store" className="w-[clamp(2.5rem,3vw,6rem)] h-[clamp(2.5rem,3vw,6rem)] cursor-pointer transition-transform duration-300 hover:scale-110" />
+              <img src={playstore} alt="Google Play" className="w-[clamp(2.5rem,3vw,6rem)] h-[clamp(2.5rem,3vw,6rem)] cursor-pointer transition-transform duration-300 hover:scale-110" />
             </div>
           </div>
 
-          <div className="flex-shrink-0 flex-1 flex items-center justify-center">
-            <div className="rounded-[clamp(1rem,1.5vw,3rem)] p-[clamp(1rem,1.5vw,3rem)] flex items-center justify-center">
-              <img src={solutionImage3} alt="Employee app" className="h-auto object-contain rounded-[clamp(0.75rem,1vw,2rem)]" />
-            </div>
+          <div className="flex-shrink-0 flex-1 flex items-center justify-center overflow-hidden rounded-[clamp(1rem,1.5vw,3rem)]">
+            <img
+              src={solutionImage3}
+              alt="Employee app"
+              className="h-auto object-contain rounded-[clamp(0.75rem,1vw,2rem)] transition-transform duration-700 hover:scale-105"
+            />
           </div>
         </div>
 

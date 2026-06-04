@@ -18,6 +18,7 @@ import NavButton from "./NavButton";
 const navItems = [
   { label: "Dashboard",            path: "/admin/dashboard",                    icon: dashboardIcon },
   { label: "Users",                path: "/admin/users",                        icon: usersIcon },
+  { label: "Requested Dishes",     path: "/admin/requested-dishes",             icon: usersIcon },
   { label: "Vendors",              path: "/admin/vendors",                      icon: vendorsIcon },
   { label: "Vendors Performance",  path: "/admin/vendors-performance",          icon: vendorsIcon },
   { label: "Attendance",           path: "/admin/attendance",                   icon: attendanceIcon },
