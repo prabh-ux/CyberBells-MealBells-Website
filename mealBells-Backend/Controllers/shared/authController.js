@@ -28,7 +28,7 @@ export const signUp = async (req, res) => {
         email:          newUser.email,
         id:             newUser._id,
         organizationId: newUser.organizationId,
-        type:           newUser.type,           // ← added
+        type:           newUser.type,
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -63,7 +63,7 @@ export const login = async (req, res) => {
         email:          user.email,
         id:             user._id,
         organizationId: user.organizationId,
-        type:           user.type,              // ← added
+        type:           user.type,
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -120,6 +120,39 @@ export const updateMe = async (req, res) => {
     ).select("-password");
 
     return res.status(200).json({ success: true, user: updated });
+  } catch (err) {
+    return res.status(500).json({ msg: "Internal error: " + err.message });
+  }
+};
+
+// ── POST /auth/me/change-password ─────────────────────────────────────────────
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ msg: "Current password and new password are required." });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ msg: "New password must be at least 6 characters." });
+    }
+
+    // Fetch user with password field (selected: false by default)
+    const user = await userModel.findById(req.user.id).select("+password");
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ msg: "Current password is incorrect." });
+    }
+
+    // Hash and save new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.status(200).json({ success: true, msg: "Password changed successfully." });
   } catch (err) {
     return res.status(500).json({ msg: "Internal error: " + err.message });
   }

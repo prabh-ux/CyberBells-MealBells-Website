@@ -5,7 +5,8 @@ import type { User, EditForm, EditVendorForm, Vendor } from "../types/admin";
 
 export interface UserRecord {
   _id:         string;
-  fullName:    string;
+ name:        string;    
+  fullName?:   string;      
   email:       string;
   phone?:      string;
   gender?:     string;
@@ -21,6 +22,13 @@ export interface NewVendorCredentials {
   name:     string;
 }
 
+// ── same shape for users ──────────────────────────────────────────────────────
+export interface NewUserCredentials {
+  email:    string;
+  password: string;
+  name:     string;
+}
+
 // ── User Thunks ───────────────────────────────────────────────────────────────
 
 export const addUser = createAsyncThunk(
@@ -30,7 +38,7 @@ export const addUser = createAsyncThunk(
       const { data } = await axiosInstance.post("/admin/users/add", payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      return data.user as UserRecord;
+      return data as { user: UserRecord; tempPassword: string };
     } catch (err: any) {
       const msg =
         err.response?.data?.msg ??
@@ -119,7 +127,7 @@ export const updateUser = createAsyncThunk(
   }
 );
 
-// ── Vendor-Admin Thunks (moved from vendorSlice) ──────────────────────────────
+// ── Vendor-Admin Thunks ───────────────────────────────────────────────────────
 
 export const fetchVendors = createAsyncThunk(
   "admin/fetchVendors",
@@ -212,12 +220,13 @@ const adminSlice = createSlice({
   name: "admin",
   initialState: {
     // Users
-    users:    [] as User[],
-    loading:  false,
-    adding:   false,
-    updating: false,
-    toggling: null as string | null,
-    error:    null as string | null,
+    users:              [] as User[],
+    loading:            false,
+    adding:             false,
+    updating:           false,
+    toggling:           null as string | null,
+    error:              null as string | null,
+    newUserCredentials: null as NewUserCredentials | null,   // ← new
 
     // Vendors
     vendors:              [] as Vendor[],
@@ -239,6 +248,9 @@ const adminSlice = createSlice({
     },
     clearNewVendorCredentials(state) {
       state.newVendorCredentials = null;
+    },
+    clearNewUserCredentials(state) {           // ← new
+      state.newUserCredentials = null;
     },
     optimisticToggle(state, action: { payload: string }) {
       const u = state.users.find(u => u.id === action.payload);
@@ -264,8 +276,18 @@ const adminSlice = createSlice({
 
     // addUser
     builder.addCase(addUser.pending,   state => { state.adding = true;  state.error = null; });
-    builder.addCase(addUser.fulfilled, state => { state.adding = false; });
-    builder.addCase(addUser.rejected,  (state, { payload }) => { state.adding = false; state.error = payload as string; });
+    builder.addCase(addUser.fulfilled, (state, { payload }) => {
+  state.adding = false;
+  state.newUserCredentials = {
+    name:     payload.user.name || payload.user.fullName || "",
+    email:    payload.user.email,
+    password: payload.tempPassword,
+  };
+});
+   builder.addCase(addUser.rejected, (state, { payload }) => {
+  state.adding = false;
+  state.error  = (payload as string) ?? "Failed to add user.";
+});
 
     // fetchUsers
     builder.addCase(fetchUsers.pending,   state => { state.loading = true;  state.error = null; });
@@ -355,6 +377,7 @@ export const {
   resetUserState,
   resetVendorState,
   clearNewVendorCredentials,
+  clearNewUserCredentials,
   optimisticToggle,
   revertToggle,
   optimisticToggleVendor,

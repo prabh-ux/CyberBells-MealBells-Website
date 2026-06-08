@@ -10,7 +10,7 @@ const dishSchema = new mongoose.Schema(
     },
     dishType: {
       type:    String,
-      enum:    ["Veg", "Non-Veg"],
+      enum:    ["Veg", "Non-Veg","Both"],
       default: "Veg",
     },
     description: {

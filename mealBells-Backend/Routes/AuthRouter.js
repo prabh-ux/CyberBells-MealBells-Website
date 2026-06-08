@@ -1,9 +1,15 @@
 import { Router } from "express";
 import { loginValidator, signUpValidator } from "../MiddleWare/authValidator.js";
-import { login, signUp,getMe,logout,updateMe } from "../Controllers/shared/authController.js";
+import {
+  login,
+  signUp,
+  getMe,
+  logout,
+  updateMe,
+  changePassword,
+} from "../Controllers/shared/authController.js";
 import { ensureJwtValidation } from "../MiddleWare/jwtVerify.js";
 import { uplode } from "../utils/multer.js";
-
 
 const upload = (fieldName) => (req, res, next) => {
   uplode.single(fieldName)(req, res, (err) => {
@@ -11,14 +17,14 @@ const upload = (fieldName) => (req, res, next) => {
     next();
   });
 };
+
 const router = Router();
 
-router.post('/login', loginValidator, login);
-router.post('/signup', signUpValidator, signUp);
-router.get("/me", ensureJwtValidation, getMe);
-router.put ("/me/update", ensureJwtValidation, upload("avatar"), updateMe);
-
-router.post("/logout", logout); 
-
+router.post("/login",               loginValidator,  login);
+router.post("/signup",              signUpValidator, signUp);
+router.get ("/me",                  ensureJwtValidation, getMe);
+router.put ("/me/update",           ensureJwtValidation, upload("avatar"), updateMe);
+router.post("/me/change-password",  ensureJwtValidation, changePassword);
+router.post("/logout",              logout);
 
 export default router;

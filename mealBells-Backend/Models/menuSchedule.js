@@ -1,4 +1,4 @@
-// Models/menuSchedule.js
+
 import mongoose from "mongoose";
 
 const menuScheduleSchema = new mongoose.Schema(
@@ -11,11 +11,11 @@ const menuScheduleSchema = new mongoose.Schema(
     scheduledDate: {
       type:     Date,
       required: true,
-      unique:   true, 
+      unique:   true,
     },
     scheduledBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref:  "users", 
+      ref:  "users",
     },
   },
   { timestamps: true }

@@ -9,6 +9,8 @@ import deliveryReducer          from "../slices/deliverySlice";
 import analyticsReducer         from "../slices/adminAnalyticsSlice";
 import vendorPerformanceReducer from "../slices/vendorPerformanceSlice";
 import dishRequestReducer       from "../slices/dishRequestSlice";
+import consumptionReducer       from "../slices/ConsumptionSliceAdmin";
+import foodWastageReducer       from "../slices/Foodwastageslice";
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +24,8 @@ export const store = configureStore({
     analytics:         analyticsReducer,
     vendorPerformance: vendorPerformanceReducer,
     dishRequests:      dishRequestReducer,
+    consumption:       consumptionReducer,
+    foodWastage:       foodWastageReducer,
   },
 });
 

@@ -4,11 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { updateMe, logoutUser } from "../../slices/authSlice";
 import type { AppDispatch, RootState } from "../../app/store";
+import axiosInstance from "../../app/axiosInstance";
+import toast from "react-hot-toast";
 import {
   ChevronLeft, ChevronRight, User, Lock, Clock,
   Bell, LogOut, Camera, Eye, EyeOff, Check,
   Save, Loader2, MessageCircle, Phone, Mail,
-  AlertCircle, ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -91,7 +93,7 @@ function SaveBtn({
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// EDIT PROFILE — uses updateMe thunk + authSlice saving/error state
+// EDIT PROFILE
 // ═══════════════════════════════════════════════════════════════════════════════
 function EditProfilePage({ onBack }: { onBack: () => void }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -102,11 +104,11 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
     email: user?.email ?? "",
     phone: user?.phone ?? "",
   });
-  const [saved, setSaved]         = useState(false);
+  const [saved, setSaved]           = useState(false);
   const [localError, setLocalError] = useState("");
-  const [preview, setPreview]     = useState(user?.avatar ?? "");
-  const fileRef                   = useRef<HTMLInputElement>(null);
-  const selectedFile              = useRef<File | null>(null);
+  const [preview, setPreview]       = useState(user?.avatar ?? "");
+  const fileRef                     = useRef<HTMLInputElement>(null);
+  const selectedFile                = useRef<File | null>(null);
 
   useEffect(() => { if (sliceError) setLocalError(sliceError); }, [sliceError]);
 
@@ -172,9 +174,9 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
         <div className="xl:col-span-2 space-y-6">
           <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-sm space-y-5">
             <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Account Info</p>
-            <Field label="Full Name"  value={form.name}  onChange={set("name")}  icon={User} />
-            <Field label="Email"      value={form.email} onChange={set("email")} icon={Mail} type="email" />
-            <Field label="Phone"      value={form.phone} onChange={set("phone")} icon={Phone} type="tel" placeholder="e.g. +1 555 000 0000" />
+            <Field label="Full Name" value={form.name}  onChange={set("name")}  icon={User} />
+            <Field label="Email"     value={form.email} onChange={set("email")} icon={Mail} type="email" />
+            <Field label="Phone"     value={form.phone} onChange={set("phone")} icon={Phone} type="tel" placeholder="e.g. +1 555 000 0000" />
             {localError && (
               <p className="text-xs text-red-500 font-semibold flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5" />{localError}
@@ -189,26 +191,40 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHANGE PASSWORD — UI only (wire to your password endpoint when ready)
+// CHANGE PASSWORD — wired to real API
 // ═══════════════════════════════════════════════════════════════════════════════
 function ChangePasswordPage({ onBack }: { onBack: () => void }) {
-  const [show, setShow] = useState({ current: false, next: false, confirm: false });
-  const [form, setForm] = useState({ current: "", next: "", confirm: "" });
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
+  const [show,   setShow]   = useState({ current: false, next: false, confirm: false });
+  const [form,   setForm]   = useState({ current: "", next: "", confirm: "" });
+  const [saved,  setSaved]  = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
 
   type F = keyof typeof form;
   const set    = (k: F) => (v: string) => setForm(f => ({ ...f, [k]: v }));
   const toggle = (k: keyof typeof show) => setShow(s => ({ ...s, [k]: !s[k] }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError("");
     if (!form.current)              { setError("Enter your current password."); return; }
     if (form.next.length < 8)       { setError("New password must be at least 8 characters."); return; }
     if (form.next !== form.confirm) { setError("Passwords do not match."); return; }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    setForm({ current: "", next: "", confirm: "" });
+
+    try {
+      setSaving(true);
+      await axiosInstance.post("/auth/me/change-password", {
+        currentPassword: form.current,
+        newPassword:     form.next,
+      });
+      toast.success("Password updated successfully!");
+      setSaved(true);
+      setForm({ current: "", next: "", confirm: "" });
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: any) {
+      setError(err.response?.data?.msg ?? "Failed to change password.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const strength = form.next.length === 0 ? 0
@@ -227,7 +243,7 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
   return (
     <div>
       <SubHeader title="Change Password" onBack={onBack} />
-      <div className="max-w-2xl space-y-6">
+      <div className="max-w-7xl space-y-6">
         <div className="bg-white rounded-[24px] p-8 border border-gray-100 shadow-sm space-y-6">
           <div className="flex gap-3 p-4 bg-orange-50 rounded-2xl border border-orange-100">
             <AlertCircle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
@@ -235,6 +251,7 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
               Use a strong password with uppercase, lowercase, numbers &amp; symbols. Never share your password.
             </p>
           </div>
+
           {fields.map(({ label, key, placeholder }) => (
             <div key={key}>
               <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{label}</label>
@@ -246,16 +263,24 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
                   placeholder={placeholder}
                   className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 pr-12 text-sm text-gray-800 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition"
                 />
-                <button type="button" onClick={() => toggle(key)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => toggle(key)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
                   {show[key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {/* Password strength bar — only on new password field */}
               {key === "next" && form.next.length > 0 && (
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex gap-1 flex-1">
                     {[1, 2, 3].map(i => (
-                      <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength ? strengthColor[strength] : "bg-gray-100"}`} />
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full transition-colors ${i <= strength ? strengthColor[strength] : "bg-gray-100"}`}
+                      />
                     ))}
                   </div>
                   <span className={`text-xs font-semibold ${strength === 1 ? "text-red-400" : strength === 2 ? "text-yellow-500" : "text-green-500"}`}>
@@ -265,112 +290,41 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
               )}
             </div>
           ))}
+
           {error && (
             <p className="text-xs text-red-500 font-semibold flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5" />{error}
             </p>
           )}
         </div>
-        <SaveBtn saved={saved} onClick={handleSave} label="Update Password" icon={Lock} />
+
+        <SaveBtn saving={saving} saved={saved} onClick={handleSave} label="Update Password" icon={Lock} />
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DELIVERY TIMING
+// DELIVERY TIMING — Coming Soon
 // ═══════════════════════════════════════════════════════════════════════════════
-const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-const HOURS = Array.from({ length: 24 }, (_, i) => {
-  const h = i % 12 || 12;
-  return `${h}:00 ${i < 12 ? "AM" : "PM"}`;
-});
-
-function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="relative">
-      <select value={value} onChange={e => onChange(e.target.value)}
-        className="appearance-none w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-orange-400 pr-8 transition">
-        {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
-      </select>
-      <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-    </div>
-  );
-}
-
-type DaySchedule = { enabled: boolean; open: string; close: string };
-
 function DeliveryTimingPage({ onBack }: { onBack: () => void }) {
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
-  const [prep, setPrep]     = useState("30");
-  const [schedule, setSchedule] = useState<Record<string, DaySchedule>>(
-    Object.fromEntries(DAYS.map(d => [d, { enabled: d !== "Sunday", open: "9:00 AM", close: "10:00 PM" }]))
-  );
-
-  const setDay = (day: string, patch: Partial<DaySchedule>) =>
-    setSchedule(s => ({ ...s, [day]: { ...s[day], ...patch } }));
-
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSaving(false); setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
   return (
     <div>
-      <SubHeader title="Delivery Timing" onBack={onBack} />
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-
-        <div className="space-y-6">
-          <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm space-y-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Preparation Time</p>
-            <p className="text-xs text-gray-400 leading-relaxed">Average time to prepare an order before handoff.</p>
-            <div className="flex items-center gap-2">
-              {["15","20","30","45","60"].map(m => (
-                <button key={m} type="button" onClick={() => setPrep(m)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${prep === m ? "bg-orange-500 border-orange-500 text-white" : "bg-gray-50 border-gray-200 text-gray-500 hover:border-orange-300"}`}>
-                  {m}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-400 text-center font-medium">{prep} minutes selected</p>
+      <SubHeader title="Delivery Timing Settings" onBack={onBack} />
+      <div className="max-w-7xl">
+        <div className="bg-white rounded-[24px] p-12 border border-gray-100 shadow-sm flex flex-col items-center text-center gap-4">
+          <div className="w-16 h-16 rounded-[20px] bg-orange-50 flex items-center justify-center">
+            <Clock className="w-8 h-8 text-orange-400" />
           </div>
-
-          <div className="bg-orange-50 rounded-[24px] p-6 border border-orange-100">
-            <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-3">Active Days</p>
-            <div className="space-y-1">
-              {DAYS.filter(d => schedule[d].enabled).map(d => (
-                <div key={d} className="flex justify-between text-xs text-orange-700">
-                  <span className="font-medium">{d.slice(0, 3)}</span>
-                  <span>{schedule[d].open} – {schedule[d].close}</span>
-                </div>
-              ))}
-            </div>
+          <div>
+            <p className="text-lg font-bold text-gray-800">Coming Soon</p>
+            <p className="text-sm text-gray-400 mt-1 max-w-xs">
+              Delivery timing settings are under development and will be available in a future update.
+            </p>
           </div>
-        </div>
-
-        <div className="xl:col-span-2 space-y-6">
-          <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-50">
-              <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Weekly Schedule</p>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {DAYS.map(day => (
-                <div key={day} className={`px-6 py-4 flex items-center gap-4 transition-colors ${!schedule[day].enabled ? "opacity-40" : ""}`}>
-                  <Toggle on={schedule[day].enabled} onChange={v => setDay(day, { enabled: v })} />
-                  <span className="w-24 text-sm font-semibold text-gray-700">{day}</span>
-                  <div className="flex items-center gap-2 flex-1">
-                    <TimeSelect value={schedule[day].open}  onChange={v => setDay(day, { open: v })} />
-                    <span className="text-gray-300 text-xs font-medium">to</span>
-                    <TimeSelect value={schedule[day].close} onChange={v => setDay(day, { close: v })} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <SaveBtn saving={saving} saved={saved} onClick={handleSave} label="Save Schedule" icon={Clock} />
+          <span className="bg-orange-50 text-orange-500 text-xs font-bold px-4 py-1.5 rounded-full border border-orange-100 tracking-wide uppercase">
+            In Progress
+          </span>
         </div>
       </div>
     </div>
@@ -393,25 +347,25 @@ const NOTIF_GROUPS: { section: string; items: NotifGroup[] }[] = [
   {
     section: "Delivery & Payments",
     items: [
-      { label: "Delivery Updates",  key: "delivery", desc: "Track real-time delivery status"   },
-      { label: "Payment Received",  key: "payment",  desc: "Confirm successful transactions"   },
-      { label: "Refund Requests",   key: "refund",   desc: "Alerts on customer refund requests"},
+      { label: "Delivery Updates", key: "delivery", desc: "Track real-time delivery status"    },
+      { label: "Payment Received", key: "payment",  desc: "Confirm successful transactions"    },
+      { label: "Refund Requests",  key: "refund",   desc: "Alerts on customer refund requests" },
     ],
   },
   {
     section: "System & Promotions",
     items: [
-      { label: "System Maintenance", key: "system",  desc: "Scheduled downtime notices"        },
-      { label: "Promotional Offers", key: "promo",   desc: "Platform campaigns & deals"        },
-      { label: "Review & Ratings",   key: "reviews", desc: "New customer reviews posted"       },
+      { label: "System Maintenance", key: "system",  desc: "Scheduled downtime notices"  },
+      { label: "Promotional Offers", key: "promo",   desc: "Platform campaigns & deals"  },
+      { label: "Review & Ratings",   key: "reviews", desc: "New customer reviews posted" },
     ],
   },
 ];
 
 function NotificationPrefsPage({ onBack }: { onBack: () => void }) {
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
-  const [prefs, setPrefs]   = useState<Record<string, { email: boolean; push: boolean; sms: boolean }>>(
+  const [saved,  setSaved]  = useState(false);
+  const [prefs,  setPrefs]  = useState<Record<string, { email: boolean; push: boolean; sms: boolean }>>(
     Object.fromEntries(
       NOTIF_GROUPS.flatMap(g => g.items).map(i => [i.key, { email: true, push: true, sms: false }])
     )
@@ -433,7 +387,7 @@ function NotificationPrefsPage({ onBack }: { onBack: () => void }) {
       <div className="space-y-6">
         <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm">
           <div className="grid grid-cols-3 gap-4">
-            {(["email","push","sms"] as const).map(ch => (
+            {(["email", "push", "sms"] as const).map(ch => (
               <div key={ch} className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-orange-400" />
                 <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{ch}</span>
@@ -455,7 +409,7 @@ function NotificationPrefsPage({ onBack }: { onBack: () => void }) {
                     <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
                   </div>
                   <div className="flex items-center gap-6 shrink-0">
-                    {(["email","push","sms"] as const).map(ch => (
+                    {(["email", "push", "sms"] as const).map(ch => (
                       <div key={ch} className="flex flex-col items-center gap-1">
                         <span className="text-[10px] font-bold uppercase tracking-wide text-gray-300 hidden lg:block">{ch}</span>
                         <Toggle on={prefs[item.key][ch]} onChange={() => toggle(item.key, ch)} />
@@ -478,18 +432,18 @@ function NotificationPrefsPage({ onBack }: { onBack: () => void }) {
 // MENU CONFIG
 // ═══════════════════════════════════════════════════════════════════════════════
 const MENU: { page: Page; label: string; desc: string; icon: React.FC<{ className?: string }> }[] = [
-  { page: "edit",            label: "Edit Profile",             desc: "Update your name, email & photo",   icon: User  },
-  { page: "password",        label: "Change Password",          desc: "Update your login credentials",     icon: Lock  },
-  { page: "delivery-timing", label: "Delivery Timing Settings", desc: "Set your hours, days & prep time",  icon: Clock },
-  { page: "notifications",   label: "Notification Preferences", desc: "Manage your alert preferences",     icon: Bell  },
+  { page: "edit",            label: "Edit Profile",             desc: "Update your name, email & photo",  icon: User  },
+  { page: "password",        label: "Change Password",          desc: "Update your login credentials",    icon: Lock  },
+  { page: "delivery-timing", label: "Delivery Timing Settings", desc: "Set your hours, days & prep time", icon: Clock },
+  { page: "notifications",   label: "Notification Preferences", desc: "Manage your alert preferences",    icon: Bell  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function VendorSettings() {
-  const navigate  = useNavigate();
-  const dispatch  = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const { user, loading, initialized } = useSelector((s: RootState) => s.auth);
   const [page, setPage] = useState<Page>("main");
 
@@ -509,7 +463,9 @@ export default function VendorSettings() {
   if (!user) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F6F3] gap-3">
       <p className="text-sm text-gray-400">Could not load profile.</p>
-      <button onClick={() => navigate("/login")} className="text-sm font-semibold text-orange-500">Go to Login</button>
+      <button onClick={() => navigate("/login")} className="text-sm font-semibold text-orange-500">
+        Go to Login
+      </button>
     </div>
   );
 
@@ -611,8 +567,14 @@ export default function VendorSettings() {
                 <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Account Settings</p>
               </div>
               {MENU.map(({ page: p, label, desc, icon: Icon }, idx) => (
-                <button key={p} type="button" onClick={() => setPage(p)}
-                  className={`w-full flex items-center gap-4 px-6 py-5 hover:bg-orange-50 transition-colors text-left group ${idx < MENU.length - 1 ? "border-b border-gray-50" : ""}`}>
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPage(p)}
+                  className={`w-full flex items-center gap-4 px-6 py-5 hover:bg-orange-50 transition-colors text-left group ${
+                    idx < MENU.length - 1 ? "border-b border-gray-50" : ""
+                  }`}
+                >
                   <div className="w-11 h-11 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0 group-hover:bg-orange-100 transition-colors">
                     <Icon className="w-5 h-5 text-orange-500" />
                   </div>
@@ -620,13 +582,23 @@ export default function VendorSettings() {
                     <p className="text-sm font-semibold text-gray-800">{label}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all" />
+                  <div className="flex items-center gap-2 shrink-0">
+                    {p === "delivery-timing" && (
+                      <span className="bg-orange-50 text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-orange-100 uppercase tracking-wide">
+                        Soon
+                      </span>
+                    )}
+                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all" />
+                  </div>
                 </button>
               ))}
             </div>
 
-            <button type="button" onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-[20px] border-2 border-red-100 text-red-500 hover:bg-red-50 font-bold text-sm transition-colors">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-[20px] border-2 border-red-100 text-red-500 hover:bg-red-50 font-bold text-sm transition-colors"
+            >
               <LogOut className="w-4 h-4" /> Logout
             </button>
           </div>

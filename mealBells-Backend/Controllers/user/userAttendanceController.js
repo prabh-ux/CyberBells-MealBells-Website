@@ -1,12 +1,27 @@
+// Controllers/user/attendanceController.js
 import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { Attendance }   from "../../Models/attendance.js";
 import { userModel }    from "../../Models/user.js";
 
-const getDayRange = (date = new Date()) => {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
+/**
+ * Normalizes any date to UTC midnight (00:00:00.000Z).
+ * This ensures date-only comparisons work regardless of server timezone.
+ * e.g. 2026-06-08T14:32:00+05:30  →  2026-06-08T00:00:00.000Z
+ */
+const toUTCMidnight = (date = new Date()) => {
+  const d = new Date(date);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+};
+
+/**
+ * Returns UTC start/end bounds for a given date.
+ * start = 2026-06-08T00:00:00.000Z
+ * end   = 2026-06-08T23:59:59.999Z
+ */
+const getUTCDayRange = (date = new Date()) => {
+  const start = new Date(date); start.setUTCHours(0,  0,  0,   0);
+  const end   = new Date(date); end.setUTCHours(23, 59, 59, 999);
   return { start, end };
 };
 
@@ -20,11 +35,20 @@ export const markAttendance = async (req, res) => {
       return res.status(400).json({ success: false, msg: 'response must be "yes" or "no"' });
     }
 
-    const { start, end } = getDayRange();
+    const { start, end } = getUTCDayRange(); // today in UTC
 
     await Attendance.findOneAndUpdate(
       { userId, date: { $gte: start, $lte: end } },
-      { $set: { userId, organizationId, scheduleId: scheduleId ?? null, response, date: new Date() } },
+      {
+        $set: {
+          userId,
+          organizationId,
+          scheduleId: scheduleId ?? null,
+          response,
+          // FIX: store UTC midnight so all analytics date-range queries match correctly
+          date: toUTCMidnight(),
+        },
+      },
       { upsert: true, new: true }
     );
 
@@ -76,11 +100,20 @@ export const markAttendanceForDay = async (req, res) => {
       return res.status(404).json({ success: false, msg: "Schedule not found" });
     }
 
-    const { start, end } = getDayRange(schedule.scheduledDate);
+    const { start, end } = getUTCDayRange(schedule.scheduledDate);
 
     await Attendance.findOneAndUpdate(
       { userId, date: { $gte: start, $lte: end } },
-      { $set: { userId, organizationId, scheduleId, response, date: new Date(schedule.scheduledDate) } },
+      {
+        $set: {
+          userId,
+          organizationId,
+          scheduleId,
+          response,
+          // FIX: normalize to UTC midnight of the scheduled date
+          date: toUTCMidnight(schedule.scheduledDate),
+        },
+      },
       { upsert: true, new: true }
     );
 

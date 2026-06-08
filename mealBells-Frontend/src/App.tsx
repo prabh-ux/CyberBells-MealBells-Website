@@ -49,8 +49,7 @@ import VendorReviews from "./pages/vendor/VendorReviews";
 import ReviewDetail from "./pages/vendor/ReviewDetail";
 import VendorReport from "./pages/vendor/VendorReport";
 import VendorSettings from "./pages/vendor/VendorSettings";
-import RequestedDishesByUsers from './pages/admin/RequestedDishesByUsers'
-
+import RequestedDishesByUsers from "./pages/admin/RequestedDishesByUsers";
 
 function App() {
   const location = useLocation();
@@ -105,59 +104,63 @@ function App() {
 
             {/* Auth */}
             <Route element={<ProtectedRoute redirectIfAuthed />}>
-              <Route path="/login"  element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/login"           element={<Login />} />
+              <Route path="/signup"          element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
             </Route>
 
-            {/* Admin — protected */}
+            {/* Admin — all routes require auth */}
             <Route element={<ProtectedRoute requireAuth />}>
               <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="/admin/dashboard"                    element={<AnalyticsDashboard />} />
-              <Route path="/admin/profile"                      element={<ProfileSettings />} />
-              <Route path="/admin/users"                        element={<UserManagement />} />
+              <Route path="/admin/dashboard"                     element={<AnalyticsDashboard />} />
+              <Route path="/admin/profile"                       element={<ProfileSettings />} />
+              <Route path="/admin/users"                         element={<UserManagement />} />
               <Route path="/admin/requested-dishes"              element={<RequestedDishesByUsers />} />
-              <Route path="/admin/add-user"                     element={<AddUser />} />
-              <Route path="/admin/vendors"                      element={<VendorManagement />} />
-              <Route path="/admin/add-vendor"                   element={<AddVendor />} />
-              <Route path="/admin/vendors-performance"          element={<VendorPerformance />} />
-              <Route path="/admin/menu-overview"                element={<MenuOverview />} />
-              <Route path="/admin/menu-management"              element={<MenuManagement />} />
-              <Route path="/admin/menu-management/:id"          element={<MenuManagement />} />
-              <Route path="/admin/attendance"                   element={<AttendanceSummary />} />
-              <Route path="/admin/reports"                      element={<FoodWastageReport />} />
-              <Route path="/admin/food-wastage-report"          element={<FoodWastageReport />} />
-              <Route path="/admin/consumption-analytics-report" element={<ConsumptionAnalytics />} />
-              <Route path="/admin/settings"                     element={<Settings />} />
-              <Route path="/admin/notifications"                element={<AdminNotifications />} />
+              <Route path="/admin/add-user"                      element={<AddUser />} />
+              <Route path="/admin/vendors"                       element={<VendorManagement />} />
+              <Route path="/admin/add-vendor"                    element={<AddVendor />} />
+              <Route path="/admin/vendors-performance"           element={<VendorPerformance />} />
+              <Route path="/admin/menu-overview"                 element={<MenuOverview />} />
+              <Route path="/admin/menu-management"               element={<MenuManagement />} />
+              <Route path="/admin/menu-management/:id"           element={<MenuManagement />} />
+              <Route path="/admin/attendance"                    element={<AttendanceSummary />} />
+              <Route path="/admin/reports"                       element={<FoodWastageReport />} />
+              <Route path="/admin/food-wastage-report"           element={<FoodWastageReport />} />
+              <Route path="/admin/consumption-analytics-report"  element={<ConsumptionAnalytics />} />
+              <Route path="/admin/notifications"                 element={<AdminNotifications />} />
+            </Route>
+
+            {/* ── Settings — admin only ─────────────────────────────────── */}
+            <Route element={<ProtectedRoute requireAuth adminOnly />}>
+              <Route path="/admin/settings" element={<Settings />} />
             </Route>
 
             {/* User */}
             <Route path="/user" element={<Navigate to="/user/today-menu" replace />} />
-            <Route path="/user/today-menu"            element={<TodayMenuPanel />} />
-            <Route path="/user/weekly-menu-panel"     element={<WeeklyMenuPanel />} />
-            <Route path="/user/dish-details-panel/:scheduleId" element={<DishDetailsPanel />} />
-            <Route path="/user/dish-request"          element={<RequestDishPanel />} />
-            <Route path="/user/reviews"               element={<MyReviewsPanel />} />
-            <Route path="/user/rate-my-meal"          element={<RateMealPanel />} />
-            <Route path="/user/delivery-status"       element={<DeliveryStatus />} />
-            <Route path="/user/my-consumption-report" element={<MyConsumptionReport />} />
-            <Route path="/user/profile"               element={<Profile />} />
-            <Route path="/user/notification"          element={<Notifications />} />
+            <Route path="/user/today-menu"                      element={<TodayMenuPanel />} />
+            <Route path="/user/weekly-menu-panel"               element={<WeeklyMenuPanel />} />
+            <Route path="/user/dish-details-panel/:scheduleId"  element={<DishDetailsPanel />} />
+            <Route path="/user/dish-request"                    element={<RequestDishPanel />} />
+            <Route path="/user/reviews"                         element={<MyReviewsPanel />} />
+            <Route path="/user/rate-my-meal"                    element={<RateMealPanel />} />
+            <Route path="/user/delivery-status"                 element={<DeliveryStatus />} />
+            <Route path="/user/my-consumption-report"           element={<MyConsumptionReport />} />
+            <Route path="/user/profile"                         element={<Profile />} />
+            <Route path="/user/notification"                    element={<Notifications />} />
 
             {/* Vendor — protected */}
             <Route element={<ProtectedRoute requireAuth />}>
               <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
-              <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-               <Route path="/vendor/menu"     element={<TodayMenu />} /> 
-             <Route path="/vendor/menu/edit" element={<EditDish />} />
-             <Route path="/vendor/menu/weekly" element={<WeeklyMenu />} />
-             <Route path="/vendor/requested-dishes" element={<RequestedDishes />} />
-             <Route path="/vendor/delivery" element={<DeliveryStatusVendor />} /> 
-              {<Route path="/vendor/reviews"  element={<VendorReviews />} /> }
-              <Route path="/vendor/reviews/:id" element={<ReviewDetail />} />
-              <Route path="/vendor/reports"  element={<VendorReport />} /> 
-               <Route path="/vendor/settings" element={<VendorSettings />}/>
+              <Route path="/vendor/dashboard"        element={<VendorDashboard />} />
+              <Route path="/vendor/menu"             element={<TodayMenu />} />
+              <Route path="/vendor/menu/edit"        element={<EditDish />} />
+              <Route path="/vendor/menu/weekly"      element={<WeeklyMenu />} />
+              <Route path="/vendor/requested-dishes" element={<RequestedDishes />} />
+              <Route path="/vendor/delivery"         element={<DeliveryStatusVendor />} />
+              <Route path="/vendor/reviews"          element={<VendorReviews />} />
+              <Route path="/vendor/reviews/:id"      element={<ReviewDetail />} />
+              <Route path="/vendor/reports"          element={<VendorReport />} />
+              <Route path="/vendor/settings"         element={<VendorSettings />} />
             </Route>
           </Routes>
 

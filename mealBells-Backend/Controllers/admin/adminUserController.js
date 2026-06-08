@@ -15,6 +15,13 @@ export const addUser = async (req, res) => {
     if (existing)
       return res.status(409).json({ msg: "Email already in use" });
 
+    // ── Get admin's organizationId so new user inherits it ──────────────────
+    const admin = await userModel.findById(req.user.id).select("organizationId");
+    if (!admin?.organizationId)
+      return res.status(400).json({
+        msg: "Please complete your organization settings before adding users.",
+      });
+
     const avatarUrl      = req.file?.path     || "";
     const avatarPublicId = req.file?.filename || "";
 
@@ -22,17 +29,18 @@ export const addUser = async (req, res) => {
     const hashed       = await bcrypt.hash(tempPassword, 10);
 
     const user = await userModel.create({
-      type:       "user",
-      name:       fullName,
+      type:           "user",
+      name:           fullName,
       email,
-      phone:      phone      || "",
-      gender:     gender     || "",
-      department: department || "",
-      role:       role       || "Standard User",
-      active:     active === "false" ? false : true,
-      avatar:     avatarUrl,
+      phone:          phone      || "",
+      gender:         gender     || "",
+      department:     department || "",
+      role:           role       || "Standard User",
+      active:         active === "false" ? false : true,
+      avatar:         avatarUrl,
       avatarPublicId,
-      password:   hashed,
+      password:       hashed,
+      organizationId: admin.organizationId,   // ← key fix
     });
 
     await logActivity({

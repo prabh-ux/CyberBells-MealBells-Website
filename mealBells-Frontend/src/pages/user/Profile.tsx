@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import type { ChangeEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { updateMe, logoutUser } from "../../slices/authSlice";
+import type { ChangeEvent }            from "react";
+import { useNavigate }                 from "react-router-dom";
+import { useDispatch, useSelector }    from "react-redux";
+import { updateMe, logoutUser }        from "../../slices/authSlice";
 import type { AppDispatch, RootState } from "../../app/store";
+import axiosInstance                   from "../../app/axiosInstance";
+import toast                           from "react-hot-toast";
 import {
   ChevronLeft, ChevronRight, User, Lock,
   Salad, LogOut, Camera, Eye, EyeOff, Check,
@@ -34,24 +36,23 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
   const dispatch  = useDispatch<AppDispatch>();
   const { user, saving, error: sliceError } = useSelector((state: RootState) => state.auth);
 
-  const [form, setForm]       = useState({
+  const [form, setForm]           = useState({
     name:  user?.name  ?? "",
     email: user?.email ?? "",
     phone: user?.phone ?? "",
   });
-  const [saved, setSaved]     = useState(false);
-  const [localError, setLocalError] = useState("");
-  const [preview, setPreview] = useState(user?.avatar ?? "");
-  const fileRef               = useRef<HTMLInputElement>(null);
-  const selectedFile          = useRef<File | null>(null);
+  const [saved,       setSaved]       = useState(false);
+  const [localError,  setLocalError]  = useState("");
+  const [preview,     setPreview]     = useState(user?.avatar ?? "");
+  const fileRef                       = useRef<HTMLInputElement>(null);
+  const selectedFile                  = useRef<File | null>(null);
 
-  // Mirror slice error into local error display
   useEffect(() => {
     if (sliceError) setLocalError(sliceError);
   }, [sliceError]);
 
   const set = (k: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
+    setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,8 +76,9 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const avatarSrc = preview
-    || `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name || "U")}&background=f97316&color=fff`;
+  const avatarSrc =
+    preview ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(form.name || "U")}&background=f97316&color=fff`;
 
   return (
     <div>
@@ -140,35 +142,51 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
           {saving
             ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
             : saved
-            ? <><Check className="w-4 h-4" /> Saved!</>
-            : <><Save className="w-4 h-4" /> Save Changes</>}
+            ? <><Check   className="w-4 h-4" /> Saved!</>
+            : <><Save    className="w-4 h-4" /> Save Changes</>}
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Change Password page (UI only — no password endpoint exists yet) ─────────
+// ─── Change Password page ─────────────────────────────────────────────────────
 function ChangePasswordPage({ onBack }: { onBack: () => void }) {
-  const [show, setShow]   = useState({ current: false, next: false, confirm: false });
-  const [form, setForm]   = useState({ current: "", next: "", confirm: "" });
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
+  const [show,  setShow]  = useState({ current: false, next: false, confirm: false });
+  const [form,  setForm]  = useState({ current: "", next: "", confirm: "" });
+  const [saved,   setSaved]   = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState("");
 
   type Field = keyof typeof form;
-  const set    = (k: Field) => (e: ChangeEvent<HTMLInputElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
-  const toggle = (k: keyof typeof show) =>
-    setShow(s => ({ ...s, [k]: !s[k] }));
 
-  const handleSave = () => {
+  const set    = (k: Field) => (e: ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const toggle = (k: keyof typeof show) =>
+    setShow((s) => ({ ...s, [k]: !s[k] }));
+
+  const handleSave = async () => {
     setError("");
+
     if (!form.current)              { setError("Enter your current password."); return; }
     if (form.next.length < 8)       { setError("New password must be at least 8 characters."); return; }
     if (form.next !== form.confirm) { setError("Passwords do not match."); return; }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    setForm({ current: "", next: "", confirm: "" });
+
+    try {
+      setSaving(true);
+      await axiosInstance.post("/auth/me/change-password", {
+        currentPassword: form.current,
+        newPassword:     form.next,
+      });
+      toast.success("Password updated successfully!");
+      setSaved(true);
+      setForm({ current: "", next: "", confirm: "" });
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: any) {
+      setError(err.response?.data?.msg ?? "Failed to change password.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const fields: { label: string; key: Field; placeholder: string }[] = [
@@ -200,7 +218,9 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
                   onClick={() => toggle(key)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {show[key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {show[key]
+                    ? <EyeOff className="w-4 h-4" />
+                    : <Eye    className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -211,11 +231,14 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={handleSave}
-          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-200/60 flex items-center justify-center gap-2 transition-all"
+          disabled={saving}
+          className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-200/60 flex items-center justify-center gap-2 transition-all"
         >
-          {saved
-            ? <><Check className="w-4 h-4" /> Updated!</>
-            : <><Lock className="w-4 h-4" /> Update Password</>}
+          {saving
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+            : saved
+            ? <><Check   className="w-4 h-4" /> Updated!</>
+            : <><Lock    className="w-4 h-4" /> Update Password</>}
         </button>
       </div>
     </div>
@@ -223,11 +246,15 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
 }
 
 // ─── Main Profile page ────────────────────────────────────────────────────────
-const MENU_ITEMS: { page: Page; label: string; desc: string; icon: React.FC<{ className?: string }> }[] = [
-  { page: "edit",          label: "Edit Profile",          desc: "Update your name, email & photo",  icon: User  },
-  { page: "password",      label: "Change Password",       desc: "Update your login credentials",    icon: Lock  },
-  // { page: "notifications", label: "Notification Settings", desc: "Manage your alert preferences",    icon: Bell  },
-  { page: "dietary",       label: "Dietary Preferences",   desc: "Veg / Non-veg, allergies & spice", icon: Salad },
+const MENU_ITEMS: {
+  page: Page;
+  label: string;
+  desc: string;
+  icon: React.FC<{ className?: string }>;
+}[] = [
+  { page: "edit",     label: "Edit Profile",        desc: "Update your name, email & photo",  icon: User  },
+  { page: "password", label: "Change Password",      desc: "Update your login credentials",    icon: Lock  },
+  { page: "dietary",  label: "Dietary Preferences",  desc: "Veg / Non-veg, allergies & spice", icon: Salad },
 ];
 
 export default function Profile() {
@@ -252,14 +279,18 @@ export default function Profile() {
   if (!user) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F6F3] gap-3">
       <p className="text-sm text-gray-400">Could not load profile.</p>
-      <button onClick={() => navigate("/login")} className="text-sm font-semibold text-orange-500">
+      <button
+        onClick={() => navigate("/login")}
+        className="text-sm font-semibold text-orange-500"
+      >
         Go to Login
       </button>
     </div>
   );
 
-  const avatarSrc = user.avatar
-    || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "U")}&background=f97316&color=fff`;
+  const avatarSrc =
+    user.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "U")}&background=f97316&color=fff`;
 
   const department = user.department ?? user.role ?? "";
 

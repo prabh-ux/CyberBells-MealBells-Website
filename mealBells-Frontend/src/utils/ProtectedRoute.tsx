@@ -5,13 +5,16 @@ import { fetchMe } from "../slices/authSlice";
 import type { AppDispatch, RootState } from "../app/store";
 
 interface Props {
-  /** Require login — redirect to /login if not authed (default: false) */
-  requireAuth?: boolean;
-  /** Redirect to /admin/dashboard if already logged in (for /login, /signup) */
-  redirectIfAuthed?: boolean;
+  requireAuth?:     boolean;  // redirect to /login if not authed
+  redirectIfAuthed?: boolean; // redirect away from /login if already authed
+  adminOnly?:       boolean;  // block non-admin users entirely
 }
 
-export default function ProtectedRoute({ requireAuth = false, redirectIfAuthed = false }: Props) {
+export default function ProtectedRoute({
+  requireAuth      = false,
+  redirectIfAuthed = false,
+  adminOnly        = false,
+}: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const { user, initialized } = useSelector((s: RootState) => s.auth);
 
@@ -29,6 +32,10 @@ export default function ProtectedRoute({ requireAuth = false, redirectIfAuthed =
 
   if (requireAuth && !user)       return <Navigate to="/login"           replace />;
   if (redirectIfAuthed && user)   return <Navigate to="/admin/dashboard" replace />;
+
+  // ── New: block non-admins from admin-only pages ───────────────────────────
+  if (adminOnly && user?.type !== "admin")
+    return <Navigate to="/user/today-menu" replace />;
 
   return <Outlet />;
 }
