@@ -170,6 +170,7 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
 
     if (!form.current)              { setError("Enter your current password."); return; }
     if (form.next.length < 8)       { setError("New password must be at least 8 characters."); return; }
+    if (!/^[A-Z]/.test(form.next))  { setError("New password must start with a capital letter."); return; }
     if (form.next !== form.confirm) { setError("Passwords do not match."); return; }
 
     try {

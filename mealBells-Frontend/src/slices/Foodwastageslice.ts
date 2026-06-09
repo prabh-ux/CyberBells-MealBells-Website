@@ -1,8 +1,6 @@
-// store/slices/foodWastageSlice.ts
+// slices/Foodwastageslice.ts
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axiosInstance from "../app/axiosInstance";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface WastageVendor {
   _id:      string;
@@ -19,7 +17,7 @@ export interface WastageSummary {
   totalWastage:      number;
   avgWastagePercent: number;
   efficiency:        number;
-  wasteTrend:        number | null; // negative = improving, positive = worsening
+  wasteTrend:        number | null;
 }
 
 export interface WastageChartPoint {
@@ -32,8 +30,8 @@ export interface WastageChartPoint {
 }
 
 export interface WastageTableRow {
-  date:           string; // "Jun 08"
-  fullDate:       string; // "2025-06-08"
+  date:           string;
+  fullDate:       string;
   expected:       number;
   delivered:      number;
   eaten:          number;
@@ -49,33 +47,33 @@ export interface WastagePagination {
 }
 
 export interface FoodWastageFilters {
-  vendor:   string; // "all" or vendor _id (ObjectId string)
-  mealType: string; // "all" | "Veg" | "Non-Veg" | "Both"
+  vendor:   string;
+  mealType: string;  // "Veg" | "Non-Veg" | "Both"
   days:     7 | 14 | 30;
 }
 
+// ✅ "Both" = default (show all meal types, nothing sent to backend)
 export const DEFAULT_WASTAGE_FILTERS: FoodWastageFilters = {
   vendor:   "all",
-  mealType: "all",
+  mealType: "Both",
   days:     7,
 };
 
 // ── Query-string builder ──────────────────────────────────────────────────────
-
+// "Both" is treated as "no filter" — not sent to backend
 const toQS = (
   f: FoodWastageFilters,
   extra?: Record<string, string | number>
 ) => {
   const p = new URLSearchParams({ days: String(f.days) });
-  if (f.vendor   !== "all") p.set("vendor",   f.vendor);
-  if (f.mealType !== "all") p.set("mealType", f.mealType);
+  if (f.vendor   !== "all")  p.set("vendor",   f.vendor);
+  if (f.mealType !== "Both") p.set("mealType", f.mealType);
   if (extra) Object.entries(extra).forEach(([k, v]) => p.set(k, String(v)));
   return p.toString();
 };
 
 // ── Thunks ────────────────────────────────────────────────────────────────────
 
-/** Fetch vendors from DB — replaces the old static VENDORS array */
 export const fetchWastageVendors = createAsyncThunk(
   "foodWastage/fetchVendors",
   async (_, { rejectWithValue }) => {
@@ -83,9 +81,7 @@ export const fetchWastageVendors = createAsyncThunk(
       const { data } = await axiosInstance.get("/admin/food-wastage/vendors");
       return data.vendors as WastageVendor[];
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.msg ?? "Failed to fetch vendors."
-      );
+      return rejectWithValue(err.response?.data?.msg ?? "Failed to fetch vendors.");
     }
   }
 );
@@ -95,13 +91,11 @@ export const fetchWastageSummary = createAsyncThunk(
   async (filters: FoodWastageFilters, { rejectWithValue }) => {
     try {
       const { data } = await axiosInstance.get(
-        `/admin/food-wastage/summary?${toQS(filters, { days: 30 })}`
+        `/admin/food-wastage/summary?${toQS(filters)}`
       );
       return data.summary as WastageSummary;
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.msg ?? "Failed to fetch wastage summary."
-      );
+      return rejectWithValue(err.response?.data?.msg ?? "Failed to fetch wastage summary.");
     }
   }
 );
@@ -115,9 +109,7 @@ export const fetchWastageChart = createAsyncThunk(
       );
       return data.data as WastageChartPoint[];
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.msg ?? "Failed to fetch wastage chart."
-      );
+      return rejectWithValue(err.response?.data?.msg ?? "Failed to fetch wastage chart.");
     }
   }
 );
@@ -125,11 +117,7 @@ export const fetchWastageChart = createAsyncThunk(
 export const fetchWastageTable = createAsyncThunk(
   "foodWastage/fetchTable",
   async (
-    {
-      filters,
-      page  = 1,
-      limit = 5,
-    }: { filters: FoodWastageFilters; page?: number; limit?: number },
+    { filters, page = 1, limit = 5 }: { filters: FoodWastageFilters; page?: number; limit?: number },
     { rejectWithValue }
   ) => {
     try {
@@ -137,13 +125,11 @@ export const fetchWastageTable = createAsyncThunk(
         `/admin/food-wastage/table?${toQS(filters, { page, limit })}`
       );
       return {
-        rows:       data.data        as WastageTableRow[],
-        pagination: data.pagination  as WastagePagination,
+        rows:       data.data       as WastageTableRow[],
+        pagination: data.pagination as WastagePagination,
       };
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.msg ?? "Failed to fetch wastage table."
-      );
+      return rejectWithValue(err.response?.data?.msg ?? "Failed to fetch wastage table.");
     }
   }
 );
@@ -155,22 +141,22 @@ const foodWastageSlice = createSlice({
   initialState: {
     filters: DEFAULT_WASTAGE_FILTERS as FoodWastageFilters,
 
-    // Vendors (fetched from DB)
+    // ✅ FIX 3: timestamp bumped on every Apply press
+    // — forces useEffect to re-fire even when filter values haven't changed
+    filtersAppliedAt: 0 as number,
+
     vendors:        [] as WastageVendor[],
     vendorsLoading: false,
     vendorsError:   null as string | null,
 
-    // Summary
     summary:        null as WastageSummary | null,
     summaryLoading: false,
     summaryError:   null as string | null,
 
-    // Chart
     chartData:    [] as WastageChartPoint[],
     chartLoading: false,
     chartError:   null as string | null,
 
-    // Table
     tableRows:    [] as WastageTableRow[],
     pagination:   null as WastagePagination | null,
     tableLoading: false,
@@ -184,16 +170,22 @@ const foodWastageSlice = createSlice({
       state,
       { payload }: { payload: Partial<FoodWastageFilters> }
     ) {
-      state.filters     = { ...state.filters, ...payload };
-      state.currentPage = 1;
+      state.filters          = { ...state.filters, ...payload };
+      state.currentPage      = 1;
+      // ✅ Always bump so the useEffect dep changes even on identical filter values
+      state.filtersAppliedAt = Date.now();
     },
+
     resetWastageFilters(state) {
-      state.filters     = { ...DEFAULT_WASTAGE_FILTERS };
-      state.currentPage = 1;
+      state.filters          = { ...DEFAULT_WASTAGE_FILTERS };
+      state.currentPage      = 1;
+      state.filtersAppliedAt = Date.now();
     },
+
     setWastagePage(state, { payload }: { payload: number }) {
       state.currentPage = payload;
     },
+
     clearWastageErrors(state) {
       state.summaryError = null;
       state.chartError   = null;
@@ -205,18 +197,9 @@ const foodWastageSlice = createSlice({
   extraReducers: (builder) => {
     // Vendors
     builder
-      .addCase(fetchWastageVendors.pending, (s) => {
-        s.vendorsLoading = true;
-        s.vendorsError   = null;
-      })
-      .addCase(fetchWastageVendors.fulfilled, (s, { payload }) => {
-        s.vendorsLoading = false;
-        s.vendors        = payload;
-      })
-      .addCase(fetchWastageVendors.rejected, (s, { payload }) => {
-        s.vendorsLoading = false;
-        s.vendorsError   = payload as string;
-      });
+      .addCase(fetchWastageVendors.pending,   (s) => { s.vendorsLoading = true;  s.vendorsError = null; })
+      .addCase(fetchWastageVendors.fulfilled, (s, { payload }) => { s.vendorsLoading = false; s.vendors = payload; })
+      .addCase(fetchWastageVendors.rejected,  (s, { payload }) => { s.vendorsLoading = false; s.vendorsError = payload as string; });
 
     // Summary
     builder

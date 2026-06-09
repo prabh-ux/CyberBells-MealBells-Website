@@ -1,5 +1,5 @@
 import { BarChart, Bar, Cell, XAxis, ResponsiveContainer, Tooltip } from "recharts";
-import dropDown from "../../../assets/dropDown.png";
+import DropDown from "../../shared/DropDown"; // adjust path to match your project structure
 
 function barColor(count: number, max: number) {
   const pct = (count / max) * 100;
@@ -40,7 +40,7 @@ interface Props {
   mealsData: { day: string; count: number }[];
   mealsMax:  number;
   mealRange: string;
-  loading:   boolean;   // ← added
+  loading:   boolean;
   onRangeChange: (range: string) => void;
 }
 
@@ -51,24 +51,19 @@ const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, loading,
         <h2 className="text-[16px] sm:text-[22px] lg:text-[24px] font-semibold text-(--text-primary) leading-snug">
           Meals Delivered This Week
         </h2>
-        <div className="relative shrink-0">
-          <select
+
+        {/* Custom DropDown replaces native <select> */}
+        <div className="shrink-0 w-[160px]">
+          <DropDown
             value={mealRange}
-            disabled={loading}
-            onChange={(e) => onRangeChange(e.target.value)}
-            className="appearance-none border border-[#E5E7EB] rounded-xl px-3 py-1.5 pr-7 text-[12px] sm:text-[14px] text-(--text-primary) font-medium focus:outline-none bg-white cursor-pointer disabled:opacity-50"
-          >
-            {RANGE_OPTIONS.map((opt) => <option key={opt}>{opt}</option>)}
-          </select>
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-            <img src={dropDown} alt="▾" width="10" height="10" />
-          </span>
+            options={RANGE_OPTIONS}
+            onChange={onRangeChange}
+          />
         </div>
       </div>
 
       <div style={{ height: 180 }} className="sm:!h-[220px]">
         {loading ? (
-          /* ── Skeleton bars ── */
           <div className="flex items-end justify-around w-full h-full pb-5 gap-1">
             {Array.from({ length: 7 }).map((_, i) => (
               <div

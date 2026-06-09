@@ -1,36 +1,26 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  fetchConsumptionStats,
-  fetchReviewSummary,
-} from "../../slices/userSlice";
+import { fetchConsumptionStats, fetchReviewSummary } from "../../slices/userSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 import type { ConsumptionPeriod } from "../../slices/userSlice";
-import {
-  Utensils,
-  CalendarCheck,
-  CalendarX,
-  Star,
-  Leaf,
-  TrendingUp,
-} from "lucide-react";
+import { Utensils, CalendarCheck, CalendarX, Star, Leaf, TrendingUp } from "lucide-react";
 
 type Period = "Week" | "Month" | "Year";
 
 function BarChart({ data, max }: { data: { day: string; meals: number }[]; max: number }) {
   return (
-    <div className="flex items-end gap-2 h-28">
+    <div className="flex items-end gap-1 sm:gap-2 h-24 sm:h-28">
       {data.map((d) => {
         const pct = max > 0 ? (d.meals / max) * 100 : 0;
         return (
-          <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5">
-            <div className="w-full flex flex-col justify-end" style={{ height: "80px" }}>
+          <div key={d.day} className="flex-1 flex flex-col items-center gap-1 sm:gap-1.5">
+            <div className="w-full flex flex-col justify-end" style={{ height: "72px" }}>
               <div
                 className="w-full rounded-t-lg bg-orange-500 transition-all duration-500 min-h-[4px]"
                 style={{ height: `${Math.max(pct, 4)}%` }}
               />
             </div>
-            <span className="text-[10px] text-gray-400 font-medium">{d.day}</span>
+            <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">{d.day}</span>
           </div>
         );
       })}
@@ -43,26 +33,21 @@ export default function MyConsumptionReport() {
   const [period, setPeriod] = useState<Period>("Week");
 
   const {
-    consumptionStats:        stats,
-    loadingConsumptionStats: loadingStats,
-    consumptionStatsError:   statsError,
-    reviewSummary:           reviews,
-    loadingReviewSummary:    loadingReviews,
+    consumptionStats: stats, loadingConsumptionStats: loadingStats,
+    consumptionStatsError: statsError, reviewSummary: reviews,
+    loadingReviewSummary: loadingReviews,
   } = useSelector((state: RootState) => state.user);
 
-  // Fetch stats whenever period changes
   useEffect(() => {
     dispatch(fetchConsumptionStats(period.toLowerCase() as ConsumptionPeriod));
   }, [dispatch, period]);
 
-  // Fetch review summary once on mount
   useEffect(() => {
     dispatch(fetchReviewSummary());
   }, [dispatch]);
 
   const loading = loadingStats || loadingReviews;
 
-  // ── Loading ──
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F6F3]">
@@ -70,7 +55,6 @@ export default function MyConsumptionReport() {
       </div>
     );
 
-  // ── Error ──
   if (statsError || !stats)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F6F3] gap-3 px-8 text-center">
@@ -85,48 +69,47 @@ export default function MyConsumptionReport() {
       : 0;
 
   const periodLabel =
-    period === "Week"
-      ? "Lunch boxes eaten this week"
-      : period === "Month"
-        ? "Lunch boxes eaten this month"
-        : "Lunch boxes eaten this year";
+    period === "Week" ? "Lunch boxes eaten this week"
+    : period === "Month" ? "Lunch boxes eaten this month"
+    : "Lunch boxes eaten this year";
 
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
-      <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
-        {/* ── Header ── */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12">
+
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
             My Consumption Report
           </h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* ── LEFT ── */}
-          <div className="lg:col-span-2 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
+
+          {/* LEFT */}
+          <div className="lg:col-span-2 space-y-4 sm:space-y-5">
+
             {/* Chart card */}
-            <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-6 border border-gray-100 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 sm:mb-6 gap-3 sm:gap-0">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-0.5">
                     {period === "Week" ? "Weekly" : period === "Month" ? "Monthly" : "Yearly"} Trend
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-gray-900">{stats.totalMeals}</span>
+                    <span className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.totalMeals}</span>
                     <span className="text-orange-500 font-bold text-sm">Meals</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">{periodLabel}</p>
                 </div>
-                <div className="flex bg-gray-100 rounded-full p-1 gap-1">
+                <div className="flex bg-gray-100 rounded-full p-1 gap-1 self-start sm:self-auto">
                   {(["Week", "Month", "Year"] as Period[]).map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setPeriod(p)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                        period === p
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-400 hover:text-gray-600"
+                      className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        period === p ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
                       {p}
@@ -136,7 +119,7 @@ export default function MyConsumptionReport() {
               </div>
 
               {loadingStats ? (
-                <div className="h-28 flex items-center justify-center">
+                <div className="h-24 sm:h-28 flex items-center justify-center">
                   <div className="w-6 h-6 rounded-full border-2 border-orange-100 border-t-orange-500 animate-spin" />
                 </div>
               ) : (
@@ -145,108 +128,86 @@ export default function MyConsumptionReport() {
             </div>
 
             {/* Stats grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-                <div className="w-11 h-11 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
-                  <Utensils className="w-5 h-5 text-orange-500" />
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {[
+                { value: stats.totalMeals, label: "Total Meals", Icon: Utensils, bg: "bg-orange-50", col: "text-orange-500" },
+                { value: stats.daysAttended, label: "Days Attended", Icon: CalendarCheck, bg: "bg-green-50", col: "text-green-500" },
+                { value: stats.daysSkipped, label: "Days Skipped", Icon: CalendarX, bg: "bg-red-50", col: "text-red-400" },
+              ].map(({ value, label, Icon, bg, col }) => (
+                <div key={label} className="bg-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-5 border border-gray-100 shadow-sm flex items-center gap-3 sm:gap-4">
+                  <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl ${bg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${col}`} />
+                  </div>
+                  <div>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
+                    <p className="text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalMeals}</p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total Meals</p>
-                </div>
-              </div>
+              ))}
 
-              <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-                <div className="w-11 h-11 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
-                  <CalendarCheck className="w-5 h-5 text-green-500" />
+              <div className="bg-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-5 border border-gray-100 shadow-sm flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-yellow-50 flex items-center justify-center shrink-0">
+                  <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.daysAttended}</p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Days Attended</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-                <div className="w-11 h-11 rounded-2xl bg-red-50 flex items-center justify-center shrink-0">
-                  <CalendarX className="w-5 h-5 text-red-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.daysSkipped}</p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Days Skipped</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-[24px] p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-                <div className="w-11 h-11 rounded-2xl bg-yellow-50 flex items-center justify-center shrink-0">
-                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-gray-900 leading-tight truncate">{stats.mostEaten}</p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Most Eaten</p>
+                <div className="min-w-0">
+                  <p className="text-sm sm:text-lg font-bold text-gray-900 leading-tight truncate">{stats.mostEaten}</p>
+                  <p className="text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wide">Most Eaten</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ── RIGHT ── */}
-          <div className="space-y-5">
+          {/* RIGHT */}
+          <div className="space-y-4 sm:space-y-5">
+
             {/* Eco-saver */}
-            <div className="relative bg-orange-500 rounded-[24px] p-6 overflow-hidden">
-              <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-orange-400 opacity-40" />
-              <div className="absolute -right-2 -top-4 w-20 h-20 rounded-full bg-orange-600 opacity-30" />
+            <div className="relative bg-orange-500 rounded-[20px] sm:rounded-[24px] p-5 sm:p-6 overflow-hidden">
+              <div className="absolute -right-6 -bottom-6 w-28 sm:w-32 h-28 sm:h-32 rounded-full bg-orange-400 opacity-40" />
+              <div className="absolute -right-2 -top-4 w-16 sm:w-20 h-16 sm:h-20 rounded-full bg-orange-600 opacity-30" />
               <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-3">
-                  <Leaf className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   <span className="text-white font-bold text-sm">Top 5% Eco-Saver</span>
                 </div>
                 <p className="text-white/80 text-xs leading-relaxed">
                   By eating with us, you've saved{" "}
-                  <span className="text-white font-bold">
-                    {(stats.totalMeals * 0.05).toFixed(1)} kg
-                  </span>{" "}
+                  <span className="text-white font-bold">{(stats.totalMeals * 0.05).toFixed(1)} kg</span>{" "}
                   of single-use plastic waste this {period.toLowerCase()}.
                 </p>
               </div>
             </div>
 
             {/* Attendance rate */}
-            <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
+            <div className="bg-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-6 border border-gray-100 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3 sm:mb-4">
                 Attendance Rate
               </p>
-              <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-4xl font-bold text-gray-900">{attendanceRate}%</span>
-                <TrendingUp className="w-5 h-5 text-green-500" />
+              <div className="flex items-baseline gap-2 mb-3 sm:mb-4">
+                <span className="text-3xl sm:text-4xl font-bold text-gray-900">{attendanceRate}%</span>
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
               </div>
-              <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-orange-500 rounded-full transition-all duration-700"
-                  style={{ width: `${attendanceRate}%` }}
-                />
+              <div className="h-2 sm:h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${attendanceRate}%` }} />
               </div>
               <div className="flex justify-between mt-2">
-                <span className="text-[11px] text-green-500 font-semibold">
-                  {stats.daysAttended} attended
-                </span>
-                <span className="text-[11px] text-red-400 font-semibold">
-                  {stats.daysSkipped} skipped
-                </span>
+                <span className="text-[11px] text-green-500 font-semibold">{stats.daysAttended} attended</span>
+                <span className="text-[11px] text-red-400 font-semibold">{stats.daysSkipped} skipped</span>
               </div>
             </div>
 
             {/* Streak */}
-            <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
+            <div className="bg-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-6 border border-gray-100 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3 sm:mb-4">
                 Current Streak
               </p>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center">
-                  <span className="text-2xl">🔥</span>
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-orange-50 flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">🔥</span>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {stats.currentStreak}{" "}
-                    <span className="text-base font-semibold text-gray-400">days</span>
+                    <span className="text-sm sm:text-base font-semibold text-gray-400">days</span>
                   </p>
                   <p className="text-xs text-orange-500 font-semibold">
                     {stats.currentStreak > 0 ? "Keep it up!" : "Start your streak today!"}
@@ -255,21 +216,18 @@ export default function MyConsumptionReport() {
               </div>
             </div>
 
-            {/* Avg rating from reviews */}
+            {/* Avg rating */}
             {reviews && (
-              <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
+              <div className="bg-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-6 border border-gray-100 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3 sm:mb-4">
                   {reviews.totalReviews === 1 ? "Your Rating" : "Your Avg Rating"}
                 </p>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-4xl font-bold text-gray-900">{reviews.avgRating}</span>
-                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <div className="flex items-baseline gap-2 mb-3 sm:mb-4">
+                  <span className="text-3xl sm:text-4xl font-bold text-gray-900">{reviews.avgRating}</span>
+                  <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400" />
                 </div>
-                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-orange-500 rounded-full transition-all duration-700"
-                    style={{ width: `${(reviews.avgRating / 5) * 100}%` }}
-                  />
+                <div className="h-2 sm:h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${(reviews.avgRating / 5) * 100}%` }} />
                 </div>
                 <p className="text-[11px] text-gray-400 mt-2 font-semibold">
                   {reviews.totalReviews === 1 ? "From your 1 review" : `From ${reviews.totalReviews} reviews`}

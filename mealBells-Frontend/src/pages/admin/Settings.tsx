@@ -107,6 +107,10 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
       setError("New password must be at least 6 characters.");
       return;
     }
+    if (!/^[A-Z]/.test(newPassword)) {
+      setError("New password must start with a capital letter.");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError("New passwords do not match.");
       return;

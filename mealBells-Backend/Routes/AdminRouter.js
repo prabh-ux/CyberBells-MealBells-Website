@@ -45,6 +45,7 @@ import {
   getFoodWastageSummary,
   getFoodWastageChart,
   getFoodWastageTable,
+  getWastageVendors,          // ← added
 } from "../Controllers/admin/adminFoodWastageController.js";
 
 const router = Router();
@@ -66,6 +67,7 @@ router.get("/analytics/consumption-breakdown", ensureJwtValidation, getConsumpti
 router.get("/analytics/live-feed",             ensureJwtValidation, getLiveFeed);
 
 // ── Food Wastage ──────────────────────────────────────────────────────────────
+router.get("/food-wastage/vendors", ensureJwtValidation, getWastageVendors); // ← added
 router.get("/food-wastage/summary", ensureJwtValidation, getFoodWastageSummary);
 router.get("/food-wastage/chart",   ensureJwtValidation, getFoodWastageChart);
 router.get("/food-wastage/table",   ensureJwtValidation, getFoodWastageTable);
@@ -83,8 +85,8 @@ router.patch("/user/:id/status", ensureJwtValidation, toggleUserStatus);
 router.delete("/users/:id",      ensureJwtValidation, deleteUser);
 
 // ── Dish Requests ─────────────────────────────────────────────────────────────
-router.get("/dish-requests",             ensureJwtValidation, getDishRequests);
-router.post("/dish-requests/:id/forward",ensureJwtValidation, forwardDishRequest);
+router.get("/dish-requests",              ensureJwtValidation, getDishRequests);
+router.post("/dish-requests/:id/forward", ensureJwtValidation, forwardDishRequest);
 
 // ── Vendors ───────────────────────────────────────────────────────────────────
 router.post("/vendors/add",        ensureJwtValidation, upload("logo"), addVendor);

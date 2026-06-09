@@ -26,7 +26,8 @@ export const addUser = async (req, res) => {
     const avatarPublicId = req.file?.filename || "";
 
     const tempPassword = Math.random().toString(36).slice(-8);
-    const hashed       = await bcrypt.hash(tempPassword, 10);
+const capitalized  = tempPassword.charAt(0).toUpperCase() + tempPassword.slice(1);
+const hashed       = await bcrypt.hash(capitalized, 10);
 
     const user = await userModel.create({
       type:           "user",

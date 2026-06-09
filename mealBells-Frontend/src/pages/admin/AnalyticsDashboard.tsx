@@ -17,7 +17,7 @@ import AnalyticsDashboardAttendanceChart from "../../components/admin/AnalyticsD
 import AnalyticsDashboardRecentActivity  from "../../components/admin/AnalyticsDashboard/AnalyticsDashboardRecentActivity";
 import type { ActivityItem, AnalyticsFilters } from "../../slices/adminAnalyticsSlice";
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const RANGE_TO_DAYS: Record<string, 7 | 14 | 30> = {
   "Last 7 Days":  7,
@@ -27,21 +27,18 @@ const RANGE_TO_DAYS: Record<string, 7 | 14 | 30> = {
 
 const PAGE_SIZE = 3;
 
-// Builds a minimal AnalyticsFilters object for this dashboard
-// (no department / vendor / mealType filtering here — that lives in AttendanceSummary)
 const makeFilters = (days: 7 | 14 | 30): AnalyticsFilters => ({
   ...DEFAULT_FILTERS,
   days,
 });
 
-// cache key — must match the one in the slice
 const cacheKey = (f: AnalyticsFilters) =>
   `${f.days}|${f.department}|${f.vendorId}|${f.mealType}`;
 
 export function exportToCSV(data: ActivityItem[]) {
   const headers = ["Date", "Time", "Name", "Email", "Action", "Status"];
-  const rows    = data.map((a) => [a.date, a.time, a.name, a.email, a.action, a.status]);
-  const csv     = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+  const rows    = data.map(a => [a.date, a.time, a.name, a.email, a.action, a.status]);
+  const csv     = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
   const blob    = new Blob([csv], { type: "text/csv" });
   const url     = URL.createObjectURL(blob);
   const a       = document.createElement("a");
@@ -66,14 +63,13 @@ export default function AnalyticsDashboard() {
   const [activeStatus, setActiveStatus] = useState("All");
   const filterRef = useRef<HTMLDivElement>(null);
 
- useEffect(() => {
-  dispatch(fetchAnalyticsSummary(DEFAULT_FILTERS));
-  dispatch(fetchMealsChart(makeFilters(7)));
-  dispatch(fetchAttendanceChart(makeFilters(7)));
-  dispatch(fetchRecentActivity(50));
-}, [dispatch]);
+  useEffect(() => {
+    dispatch(fetchAnalyticsSummary(DEFAULT_FILTERS));
+    dispatch(fetchMealsChart(makeFilters(7)));
+    dispatch(fetchAttendanceChart(makeFilters(7)));
+    dispatch(fetchRecentActivity(50));
+  }, [dispatch]);
 
-  // ── Reload charts when range changes (skip if cached) ───────────────────────
   useEffect(() => {
     const days    = RANGE_TO_DAYS[mealRange];
     const filters = makeFilters(days);
@@ -82,7 +78,6 @@ export default function AnalyticsDashboard() {
     if (!attendanceChart[key]) dispatch(fetchAttendanceChart(filters));
   }, [mealRange, dispatch, mealsChart, attendanceChart]);
 
-  // ── Close filter popover on outside click ────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (filterRef.current && !filterRef.current.contains(e.target as Node))
@@ -92,15 +87,14 @@ export default function AnalyticsDashboard() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Derived values ───────────────────────────────────────────────────────────
   const days           = RANGE_TO_DAYS[mealRange];
   const key            = cacheKey(makeFilters(days));
   const mealsData      = mealsChart[key]      ?? [];
   const attendanceData = attendanceChart[key] ?? [];
-  const mealsMax       = mealsData.length ? Math.max(...mealsData.map((d) => d.count)) : 1;
+  const mealsMax       = mealsData.length ? Math.max(...mealsData.map(d => d.count)) : 1;
 
-  const filtered = activities.filter((a) => {
-    const matchesSearch = !search || [a.name, a.action, a.email].some((v) => v.toLowerCase().includes(search.toLowerCase()));
+  const filtered = activities.filter(a => {
+    const matchesSearch = !search || [a.name, a.action, a.email].some(v => v.toLowerCase().includes(search.toLowerCase()));
     const matchesStatus = activeStatus === "All" || a.status === activeStatus;
     return matchesSearch && matchesStatus;
   });
@@ -111,18 +105,20 @@ export default function AnalyticsDashboard() {
 
   const handleSearch       = (val: string) => { setSearch(val);     setPage(0); };
   const handleStatusFilter = (s: string)   => { setActiveStatus(s); setPage(0); setFilterOpen(false); };
-  const handlePrev         = ()            => setPage((p) => Math.max(0, p - 1));
-  const handleNext         = ()            => setPage((p) => Math.min(totalPages - 1, p + 1));
+  const handlePrev         = ()            => setPage(p => Math.max(0, p - 1));
+  const handleNext         = ()            => setPage(p => Math.min(totalPages - 1, p + 1));
 
   return (
-    <div className="min-h-full bg-[#F5F5F5] p-4 sm:p-6 lg:p-7 font-(--font-inter)">
-      <div className="flex flex-col gap-5 lg:gap-6">
+    // Responsive padding: tight on mobile, generous on desktop
+    <div className="min-h-full bg-[#F5F5F5] p-3 sm:p-5 lg:p-7 font-sans">
+      <div className="flex flex-col gap-4 sm:gap-5 lg:gap-6">
 
         <AnalyticsDashboardHeader onExport={() => exportToCSV(activities)} />
 
         <AnalyticsDashboardStatCards summary={summary} loading={summaryLoading} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Charts: stacked on mobile/tablet, side-by-side on lg */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           <AnalyticsDashboardMealsChart
             mealsData={mealsData}
             mealsMax={mealsMax}
@@ -148,7 +144,7 @@ export default function AnalyticsDashboard() {
           filterRef={filterRef}
           onSearch={handleSearch}
           onStatusFilter={handleStatusFilter}
-          onToggleFilter={() => setFilterOpen((o) => !o)}
+          onToggleFilter={() => setFilterOpen(o => !o)}
           onPrev={handlePrev}
           onNext={handleNext}
         />

@@ -6,8 +6,8 @@ import type { AppDispatch, RootState } from "../../app/store";
 import { fetchWeeklyMenu } from "../../slices/userSlice";
 
 export default function WeeklyMenuPanel() {
-  const navigate  = useNavigate();
-  const dispatch  = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
   const { weeklyMenu: schedules, loadingWeekly: loading } =
     useSelector((s: RootState) => s.user);
@@ -24,32 +24,33 @@ export default function WeeklyMenuPanel() {
     new Date(iso) < new Date() && !isToday(iso);
 
   return (
-    <div className="min-h-screen bg-[#F7F6F3] px-8 py-10 lg:px-12">
+    <div className="min-h-screen bg-[#F7F6F3] px-4 sm:px-6 lg:px-8 xl:px-12 py-6 sm:py-8 lg:py-10">
 
-      {/* ── Header ── */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 leading-tight">Weekly Menu</h1>
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+          Weekly Menu
+        </h1>
       </div>
 
-      {/* ── Content ── */}
       {loading ? (
-        <div className="flex justify-center py-40">
+        <div className="flex justify-center py-32 sm:py-40">
           <div className="w-9 h-9 border-[3px] border-orange-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : schedules.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-40 gap-4">
+        <div className="flex flex-col items-center justify-center py-32 sm:py-40 gap-4">
           <UtensilsCrossed className="w-12 h-12 text-gray-300" />
           <p className="text-gray-400 text-base">No meals scheduled this week</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 pb-8 sm:pb-10">
           {schedules.map((s) => (
             <div
               key={s.scheduleId}
               className={`transition-all duration-200 ${isPast(s.scheduledDate) ? "opacity-40" : "opacity-100"}`}
             >
               {/* Day label row */}
-              <div className="flex items-center gap-2 mb-2.5 px-0.5">
+              <div className="flex items-center gap-2 mb-2 sm:mb-2.5 px-0.5">
                 <span className={`text-[13px] font-bold tracking-wide ${isToday(s.scheduledDate) ? "text-orange-500" : "text-gray-700"}`}>
                   {dayName(s.scheduledDate)}
                 </span>
@@ -61,13 +62,13 @@ export default function WeeklyMenuPanel() {
                 )}
               </div>
 
-              {/* ── Card ── */}
+              {/* Card */}
               <div
                 onClick={() => navigate(`/user/dish-details-panel/${s.scheduleId}`)}
-                className="bg-white rounded-[24px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.07)] border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-[0_6px_24px_rgba(0,0,0,0.11)] hover:-translate-y-0.5 active:scale-[0.985] group"
+                className="bg-white rounded-[20px] sm:rounded-[24px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.07)] border border-gray-100 cursor-pointer transition-all duration-200 hover:shadow-[0_6px_24px_rgba(0,0,0,0.11)] hover:-translate-y-0.5 active:scale-[0.985] group"
               >
-                {/* Image area */}
-                <div className="relative w-full h-52 overflow-hidden">
+                {/* Image */}
+                <div className="relative w-full h-44 sm:h-52 overflow-hidden">
                   {s.dish?.image ? (
                     <img
                       src={s.dish.image}
@@ -82,15 +83,13 @@ export default function WeeklyMenuPanel() {
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
 
-                  {/* Veg badge */}
                   <div className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 backdrop-blur-md bg-white ${s.dish?.dishType === "Veg" ? "text-green-500" : "text-red-500"}`}>
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dish?.dishType === "Veg" ? "bg-green-500" : "bg-red-500"}`} />
                     <span className="text-[10px] font-bold uppercase tracking-wide leading-none">
-                      {s.dish?.dishType === "Veg" ? "Vegetarian" : "Non-Vegetarian"}
+                      {s.dish?.dishType === "Veg" ? "Vegetarian" : "Non-Veg"}
                     </span>
                   </div>
 
-                  {/* Response badge */}
                   {s.myResponse === "yes" && (
                     <div className="absolute top-3 right-3 bg-orange-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">
                       <Check className="w-3 h-3 stroke-[3]" /> Eating
@@ -103,12 +102,12 @@ export default function WeeklyMenuPanel() {
                   )}
                 </div>
 
-                {/* Info strip */}
-                <div className="px-4 pt-3.5 pb-4">
-                  <h3 className="font-bold text-gray-900 text-[15px] leading-snug mb-2.5 line-clamp-1">
+                {/* Info */}
+                <div className="px-3 sm:px-4 pt-3 pb-3 sm:pb-4">
+                  <h3 className="font-bold text-gray-900 text-[14px] sm:text-[15px] leading-snug mb-2 sm:mb-2.5 line-clamp-1">
                     {s.dish?.name}
                   </h3>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <span className="flex items-center gap-1 bg-gray-100 rounded-full px-2.5 py-1 text-[11px] font-semibold text-gray-500">
                       <Flame className="w-3 h-3 text-orange-400 flex-shrink-0" />
                       {s.dish?.estimatedCalories}
@@ -126,13 +125,13 @@ export default function WeeklyMenuPanel() {
         </div>
       )}
 
-      {/* ── Bottom CTA ── */}
+      {/* CTA */}
       <div className="pt-2 pb-4">
         <button
           onClick={() => navigate("/user/dish-request")}
-          className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2.5 transition-all duration-150 text-[15px] shadow-md shadow-orange-200/60"
+          className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold py-3.5 sm:py-4 rounded-2xl flex items-center justify-center gap-2 sm:gap-2.5 transition-all duration-150 text-sm sm:text-[15px] shadow-md shadow-orange-200/60"
         >
-          <UtensilsCrossed className="w-5 h-5" />
+          <UtensilsCrossed className="w-4 h-4 sm:w-5 sm:h-5" />
           Request Dish for Next Week
         </button>
       </div>

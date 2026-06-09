@@ -28,7 +28,7 @@ const Login = () => {
   // Redirect after successful login
   useEffect(() => {
     if (loginSuccess) {
-      const timer = setTimeout(() => navigate("/admin"), 1500);
+      const timer = setTimeout(() => navigate("/user"), 1500);
       return () => clearTimeout(timer);
     }
   }, [loginSuccess, navigate]);

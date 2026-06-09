@@ -1,9 +1,10 @@
 import type { RefObject } from "react";
 import searchIcon from "../../../assets/searchIcon.png";
-import filterIcon from "../../../assets/filterIcon.png";
 import actionBtns from "../../../assets/actionBtns.png";
+import DropDown from "../../shared/DropDown"; // adjust path to match your project structure
 
 const ALL_STATUSES = ["All", "Success", "Pending", "Critical"];
+const FILTER_OPTIONS = ["All", "Success", "Pending", "Critical"];
 
 const statusStyle: Record<string, string> = {
   Success:  "bg-[#DCFCE7] text-[#15803D]",
@@ -26,7 +27,8 @@ interface Props {
   safePage: number;
   totalPages: number;
   pageSize: number;
-filterRef: RefObject<HTMLDivElement | null>;  onSearch: (val: string) => void;
+  filterRef: RefObject<HTMLDivElement | null>;
+  onSearch: (val: string) => void;
   onStatusFilter: (status: string) => void;
   onToggleFilter: () => void;
   onPrev: () => void;
@@ -34,9 +36,9 @@ filterRef: RefObject<HTMLDivElement | null>;  onSearch: (val: string) => void;
 }
 
 const AnalyticsDashboardRecentActivity = ({
-  paginated, filtered, search, activeStatus, filterOpen,
-  safePage, totalPages, pageSize, filterRef,
-  onSearch, onStatusFilter, onToggleFilter, onPrev, onNext,
+  paginated, filtered, search, activeStatus,
+  safePage, totalPages, pageSize,
+  onSearch, onStatusFilter, onPrev, onNext,
 }: Props) => {
   return (
     <div className="bg-white rounded-2xl">
@@ -60,42 +62,16 @@ const AnalyticsDashboardRecentActivity = ({
             />
           </div>
 
-          {/* Filter */}
-          <div className="relative shrink-0" ref={filterRef}>
-            <button
-              onClick={onToggleFilter}
-              className={`flex items-center gap-2 border px-4 py-[7px] rounded-xl text-[13px] font-medium transition-colors bg-white shrink-0 ${
-                activeStatus !== "All"
-                  ? "border-[#F97316] text-[#EA580C]"
-                  : "border-[#E5E7EB] text-[#374151] hover:bg-gray-50"
-              }`}
-            >
-              <img src={filterIcon} alt="filter" width="14" height="14" />
-              <span className="hidden sm:inline">{activeStatus === "All" ? "Filter" : activeStatus}</span>
-              {activeStatus !== "All" && <span className="w-1.5 h-1.5 rounded-full bg-[#F97316] inline-block" />}
-            </button>
-
-            {filterOpen && (
-              <div className="absolute right-0 top-full mt-1.5 bg-white border border-[#E5E7EB] rounded-xl shadow-md z-20 py-1.5 min-w-[130px]">
-                {ALL_STATUSES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => onStatusFilter(s)}
-                    className={`w-full text-left px-4 py-2 text-[13px] font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 ${
-                      activeStatus === s ? "text-[#EA580C]" : "text-[#374151]"
-                    }`}
-                  >
-                    {s !== "All" ? (
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusStyle[s]}`}>{s}</span>
-                    ) : (
-                      <span>All statuses</span>
-                    )}
-                    {activeStatus === s && <span className="ml-auto text-[#EA580C]">✓</span>}
-                  </button>
-                ))}
-              </div>
-            )}
+          {/* Custom DropDown replaces the manual filter button + panel */}
+          <div className="shrink-0 w-[130px]">
+            <DropDown
+              value={activeStatus}
+              options={FILTER_OPTIONS}
+              onChange={(val) => onStatusFilter(val)}
+              placeholder="Filter"
+            />
           </div>
+
         </div>
       </div>
 
@@ -200,7 +176,7 @@ const AnalyticsDashboardRecentActivity = ({
       </div>
 
     </div>
-  )
-}
+  );
+};
 
-export default AnalyticsDashboardRecentActivity
+export default AnalyticsDashboardRecentActivity;

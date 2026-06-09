@@ -34,7 +34,7 @@ const Signup = () => {
       setPassword("");
       setConfirmPassword("");
       setLocalError("");
-      navigate("/admin");
+      navigate("/user");
     }
   }, [signupSuccess]);
 
