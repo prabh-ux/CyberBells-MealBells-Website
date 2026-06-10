@@ -12,7 +12,7 @@ const app = express();
 
 // ✅ cors FIRST — before any body parser or routes
 app.use(cors({
-  origin: "https://www.mealbells.com",
+  origin: " http://localhost:5173",
   credentials: true,
 }));
 

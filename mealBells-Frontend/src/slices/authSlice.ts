@@ -27,8 +27,12 @@ export const signupUser = createAsyncThunk(
   "auth/signup",
   async (payload: SignupPayload, { rejectWithValue }) => {
     try {
-      const { data } = await axiosInstance.post("/auth/signup", payload);
-      return (data?.message ?? data?.msg ?? "Account created successfully! You can now sign in.") as string;
+      await axiosInstance.post("/auth/signup", payload);
+      const { data } = await axiosInstance.get("/auth/me");
+      return {
+        user:    data.user as AuthUser,
+        message: "Account created successfully! Redirecting..." as string,
+      };
     } catch (err: any) {
       const msg =
         err.response?.data?.message ??
@@ -44,8 +48,6 @@ export const loginUser = createAsyncThunk(
   "auth/login",
   async (payload: LoginPayload, { rejectWithValue }) => {
     try {
-      // Backend returns: { msg, success, name }  (no user object)
-      // So after setting the cookie we immediately fetch the full user profile
       await axiosInstance.post("/auth/login", payload);
       const { data } = await axiosInstance.get("/auth/me");
       return {
@@ -63,7 +65,6 @@ export const loginUser = createAsyncThunk(
   }
 );
 
-// fetchMe — no rejectWithValue needed; rejected case already handled in slice
 export const fetchMe = createAsyncThunk(
   "auth/fetchMe",
   async (_, { rejectWithValue }) => {
@@ -71,7 +72,7 @@ export const fetchMe = createAsyncThunk(
       const { data } = await axiosInstance.get("/auth/me");
       return data.user as AuthUser;
     } catch (err: any) {
-      return rejectWithValue(null); // cookie missing / expired — not an error, just no session
+      return rejectWithValue(null);
     }
   }
 );
@@ -129,7 +130,9 @@ const authSlice = createSlice({
     });
     builder.addCase(signupUser.fulfilled, (state, action) => {
       state.signingUp     = false;
-      state.signupSuccess = action.payload;
+      state.initialized   = true;
+      state.user          = action.payload.user;
+      state.signupSuccess = action.payload.message;
     });
     builder.addCase(signupUser.rejected, (state, action) => {
       state.signingUp = false;
@@ -144,7 +147,7 @@ const authSlice = createSlice({
     });
     builder.addCase(loginUser.fulfilled, (state, action) => {
       state.loggingIn    = false;
-      state.initialized  = true;   // user is now known — skip fetchMe on next route check
+      state.initialized  = true;
       state.user         = action.payload.user;
       state.loginSuccess = action.payload.message;
     });
@@ -165,7 +168,7 @@ const authSlice = createSlice({
     });
     builder.addCase(fetchMe.rejected, state => {
       state.loading     = false;
-      state.initialized = true;   // no session — but we're done checking
+      state.initialized = true;
       state.user        = null;
     });
 
@@ -183,11 +186,11 @@ const authSlice = createSlice({
       state.error  = action.payload as string;
     });
 
-    // AFTER
-builder.addCase(logoutUser.fulfilled, state => {
-  state.user        = null;
-  state.initialized = true;   
-});
+    // ── logoutUser ────────────────────────────────────────────────────────────
+    builder.addCase(logoutUser.fulfilled, state => {
+      state.user        = null;
+      state.initialized = true;
+    });
   },
 });
 

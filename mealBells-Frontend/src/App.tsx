@@ -50,6 +50,7 @@ import ReviewDetail from "./pages/vendor/ReviewDetail";
 import VendorReport from "./pages/vendor/VendorReport";
 import VendorSettings from "./pages/vendor/VendorSettings";
 import RequestedDishesByUsers from "./pages/admin/RequestedDishesByUsers";
+import AdminHelp from "./pages/admin/Adminhelp";
 
 function App() {
   const location = useLocation();
@@ -102,15 +103,17 @@ function App() {
               <Route path="/" element={<Landing />} />
             </Route>
 
-            {/* Auth */}
+            {/* Auth — redirect to type-based home if already logged in */}
             <Route element={<ProtectedRoute redirectIfAuthed />}>
               <Route path="/login"           element={<Login />} />
               <Route path="/signup"          element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
             </Route>
 
-            {/* Admin — all routes require auth */}
-            <Route element={<ProtectedRoute requireAuth />}>
+            {/* Admin — requires auth + admin type */}
+            <Route element={<ProtectedRoute requireAuth allowedTypes={["admin"]} />}>
+              <Route path="/admin/help" element={<AdminHelp />} />
+
               <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/admin/dashboard"                     element={<AnalyticsDashboard />} />
               <Route path="/admin/profile"                       element={<ProfileSettings />} />
@@ -130,31 +133,34 @@ function App() {
               <Route path="/admin/notifications"                 element={<AdminNotifications />} />
             </Route>
 
-            {/* ── Settings — admin only ─────────────────────────────────── */}
+            {/* Admin settings — admin only */}
             <Route element={<ProtectedRoute requireAuth adminOnly />}>
               <Route path="/admin/settings" element={<Settings />} />
             </Route>
 
-            {/* User */}
-            <Route path="/user" element={<Navigate to="/user/today-menu" replace />} />
-            <Route path="/user/today-menu"                      element={<TodayMenuPanel />} />
-            <Route path="/user/weekly-menu-panel"               element={<WeeklyMenuPanel />} />
-            <Route path="/user/dish-details-panel/:scheduleId"  element={<DishDetailsPanel />} />
-            <Route path="/user/dish-request"                    element={<RequestDishPanel />} />
-            <Route path="/user/reviews"                         element={<MyReviewsPanel />} />
-            <Route path="/user/rate-my-meal"                    element={<RateMealPanel />} />
-            <Route path="/user/delivery-status"                 element={<DeliveryStatus />} />
-            <Route path="/user/my-consumption-report"           element={<MyConsumptionReport />} />
-            <Route path="/user/profile"                         element={<Profile />} />
-            <Route path="/user/notification"                    element={<Notifications />} />
+            {/* User — requires auth + user type */}
+            <Route element={<ProtectedRoute requireAuth allowedTypes={["user"]} />}>
+              <Route path="/user" element={<Navigate to="/user/today-menu" replace />} />
+              <Route path="/user/today-menu"                      element={<TodayMenuPanel />} />
+              <Route path="/user/weekly-menu-panel"               element={<WeeklyMenuPanel />} />
+              <Route path="/user/dish-details-panel/:scheduleId"  element={<DishDetailsPanel />} />
+              <Route path="/user/dish-request"                    element={<RequestDishPanel />} />
+              <Route path="/user/reviews"                         element={<MyReviewsPanel />} />
+              <Route path="/user/rate-my-meal"                    element={<RateMealPanel />} />
+              <Route path="/user/delivery-status"                 element={<DeliveryStatus />} />
+              <Route path="/user/my-consumption-report"           element={<MyConsumptionReport />} />
+              <Route path="/user/profile"                         element={<Profile />} />
+              <Route path="/user/notification"                    element={<Notifications />} />
+            </Route>
 
-            {/* Vendor — protected */}
-            <Route element={<ProtectedRoute requireAuth />}>
+            {/* Vendor — requires auth + vendor type */}
+            <Route element={<ProtectedRoute requireAuth allowedTypes={["vendor"]} />}>
               <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
               <Route path="/vendor/dashboard"        element={<VendorDashboard />} />
               <Route path="/vendor/menu"             element={<TodayMenu />} />
               <Route path="/vendor/menu/edit"        element={<EditDish />} />
               <Route path="/vendor/menu/weekly"      element={<WeeklyMenu />} />
+              <Route path="/vendor/menu/weekly/edit" element={<EditDish />} />  {/* ← ADDED */}
               <Route path="/vendor/requested-dishes" element={<RequestedDishes />} />
               <Route path="/vendor/delivery"         element={<DeliveryStatusVendor />} />
               <Route path="/vendor/reviews"          element={<VendorReviews />} />

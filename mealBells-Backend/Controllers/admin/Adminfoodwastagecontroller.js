@@ -19,7 +19,7 @@ const resolveScheduleId = async ({ date, vendorId, mealType }) => {
   const scheduleFilter  = { scheduledDate: { $gte: start, $lte: end } };
 
   if (mealType && mealType !== "all" && mealType !== "Both") {
-    const dishes = await dishModel.find({ foodType: mealType }, "_id").lean();
+const dishes = await dishModel.find({ dishType: mealType }, "_id").lean();
     if (!dishes.length) return null;
     scheduleFilter.dish = { $in: dishes.map(d => d._id) };
   }

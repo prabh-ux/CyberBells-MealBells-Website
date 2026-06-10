@@ -68,7 +68,7 @@ export default function TodayMenu() {
       </PageShell>
     );
 
-  const { dish, scheduledDate, expectedPortions } = todayMenu;
+  const { dish, scheduledDate, expectedPortions, scheduleId } = todayMenu;
   const diet = normalizeDiet(dish.dishType);
   const s    = dietStyles[diet];
 
@@ -144,10 +144,12 @@ export default function TodayMenu() {
           </div>
         </div>
 
-        {/* Edit Button */}
+        {/* Edit Button — passes scheduleId so EditDish opens in edit mode */}
         <div className="px-4 sm:px-5 pb-4 sm:pb-5">
           <button
-            onClick={() => navigate("/vendor/menu/edit")}
+            onClick={() =>
+              navigate(`/vendor/menu/edit?scheduleId=${scheduleId}&day=Today`)
+            }
             className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl bg-orange-400 text-white text-sm font-semibold hover:bg-orange-500 transition-colors"
           >
             <Pencil className="w-4 h-4" />

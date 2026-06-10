@@ -2,8 +2,8 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Plus } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchVendorWeeklyMenu } from "../../slices/vendorSlice"; 
-import type { AppDispatch, RootState } from "../../app/store"; 
+import { fetchVendorWeeklyMenu } from "../../slices/vendorSlice";
+import type { AppDispatch, RootState } from "../../app/store";
 
 // Map backend dishType → display tag
 const formatTag = (dishType?: string) => {
@@ -95,9 +95,11 @@ export default function WeeklyMenu() {
                   </p>
                 </div>
 
-                {/* Edit icon */}
+                {/* Edit icon — passes scheduleId so EditDish opens in edit mode */}
                 <button
-                  onClick={() => navigate(`/vendor/menu/edit?day=${day}&scheduleId=${schedule.scheduleId}`)}
+                  onClick={() =>
+                    navigate(`/vendor/menu/weekly/edit?day=${day}&scheduleId=${schedule.scheduleId}`)
+                  }
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-orange-50 transition-colors shrink-0"
                 >
                   <Pencil className="w-4 h-4 text-[#EA580C]" />
@@ -113,8 +115,12 @@ export default function WeeklyMenu() {
                   <p className="text-sm font-medium text-gray-300">No dish selected</p>
                   <p className="text-xs text-gray-300 mt-0.5">Tap edit to add menu</p>
                 </div>
+
+                {/* Add icon — passes date so EditDish opens in create mode for this day */}
                 <button
-                  onClick={() => navigate(`/vendor/menu/edit?day=${day}&date=${date}`)}
+                  onClick={() =>
+                    navigate(`/vendor/menu/weekly/edit?day=${day}&date=${date}`)
+                  }
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-orange-50 transition-colors shrink-0"
                 >
                   <Plus className="w-4 h-4 text-[#EA580C]" />
@@ -124,14 +130,6 @@ export default function WeeklyMenu() {
           </div>
         ))}
       </div>
-
-      {/* Edit Weekly Menu button */}
-      <button
-        onClick={() => navigate("/vendor/menu/weekly/edit")}
-        className="w-full py-4 rounded-xl bg-[#EA580C] text-white font-semibold text-sm hover:bg-[#c2410c] transition-colors shadow-sm"
-      >
-        Edit Weekly Menu
-      </button>
 
     </div>
   );

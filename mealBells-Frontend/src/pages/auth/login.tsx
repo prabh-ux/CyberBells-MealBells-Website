@@ -10,10 +10,16 @@ import lock from "../../assets/lock.png";
 import folkAndKnife from "../../assets/folkAndKnife.png";
 import emailIcon from "../../assets/email.png";
 
+const getRouteByType = (type: string) => {
+  if (type === "vendor") return "/vendor";
+  if (type === "admin")  return "/admin";
+  return "/user";
+};
+
 const Login = () => {
   const dispatch   = useDispatch<AppDispatch>();
   const navigate   = useNavigate();
-  const { loggingIn, loginSuccess, error } = useSelector((s: RootState) => s.auth);
+  const { loggingIn, loginSuccess, error, user } = useSelector((s: RootState) => s.auth);
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail]               = useState("");
@@ -25,13 +31,14 @@ const Login = () => {
     return () => { dispatch(resetLogin()); };
   }, [dispatch]);
 
-  // Redirect after successful login
+  // Redirect after successful login — route depends on user.type
   useEffect(() => {
-    if (loginSuccess) {
-      const timer = setTimeout(() => navigate("/user"), 1500);
+    if (loginSuccess && user) {
+      const route = getRouteByType(user.type);
+      const timer = setTimeout(() => navigate(route), 1500);
       return () => clearTimeout(timer);
     }
-  }, [loginSuccess, navigate]);
+  }, [loginSuccess, user, navigate]);
 
   const handleLogin = () => {
     setLocalError("");

@@ -22,13 +22,13 @@ import adminPanelHeaderIcon from "../../assets/adminPanelHeaderIcon.png";
 import NavButton from "./NavButton";
 
 const navItems = [
-  { label: "Dashboard",   path: "/vendor/dashboard",      icon: LayoutDashboard },
-  { label: "Today's Menu", path: "/vendor/menu",           icon: UtensilsCrossed },
-  { label: "Weekly Menu", path: "/vendor/menu/weekly",    icon: CalendarDays },
+  { label: "Dashboard",        path: "/vendor/dashboard",        icon: LayoutDashboard },
+  { label: "Today's Menu",     path: "/vendor/menu",             icon: UtensilsCrossed },
+  { label: "Weekly Menu",      path: "/vendor/menu/weekly",      icon: CalendarDays },
   { label: "Requested Dishes", path: "/vendor/requested-dishes", icon: ClipboardList },
-  { label: "Delivery",    path: "/vendor/delivery",       icon: Truck },
-  { label: "Reviews",     path: "/vendor/reviews",        icon: Star },
-  { label: "Reports",     path: "/vendor/reports",        icon: BarChart3 },
+  { label: "Delivery",         path: "/vendor/delivery",         icon: Truck },
+  { label: "Reviews",          path: "/vendor/reviews",          icon: Star },
+  { label: "Reports",          path: "/vendor/reports",          icon: BarChart3 },
 ];
 
 const bottomItems = [
@@ -37,9 +37,19 @@ const bottomItems = [
 
 function getIsActive(path: string, currentPath: string): boolean {
   if (currentPath === path) return true;
+
+  // /vendor → dashboard
   if (path === "/vendor/dashboard" && currentPath === "/vendor") return true;
+
+  // Today's Menu: only its own edit route, NOT the weekly edit route
   if (path === "/vendor/menu" && currentPath === "/vendor/menu/edit") return true;
-  if (path === "/vendor/menu/weekly" && currentPath === "/vendor/menu/weekly/edit") return true;
+
+  // Weekly Menu: highlights for both weekly view and weekly edit
+  if (
+    path === "/vendor/menu/weekly" &&
+    currentPath.startsWith("/vendor/menu/weekly")
+  ) return true;
+
   return false;
 }
 
