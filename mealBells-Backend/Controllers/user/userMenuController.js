@@ -2,6 +2,7 @@ import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { Attendance }   from "../../Models/attendance.js";
 import { Review }       from "../../Models/review.js";
 import { userModel }    from "../../Models/user.js";
+import { Delivery }     from "../../Models/delivery.js"; 
 
 const getDayRange = (date = new Date()) => {
   const start = new Date(date);
@@ -35,13 +36,18 @@ export const getTodayMenu = async (req, res) => {
       return res.status(404).json({ success: false, msg: "No menu scheduled for today" });
     }
 
-    const yesAttendances = await Attendance.find({
-      organizationId,
-      date:     { $gte: start, $lte: end },
-      response: "yes",
-    })
-      .select("userId")
-      .lean();
+    // run all independent queries in parallel
+    const [yesAttendances, myAttendance, delivery] = await Promise.all([
+      Attendance.find({
+        organizationId,
+        date:     { $gte: start, $lte: end },
+        response: "yes",
+      }).select("userId").lean(),
+
+      Attendance.findOne({ userId, date: { $gte: start, $lte: end } }).lean(),
+
+      Delivery.findOne({ scheduleId: schedule._id }).lean(),
+    ]);
 
     const colleaguesEating = yesAttendances.length;
 
@@ -57,19 +63,16 @@ export const getTodayMenu = async (req, res) => {
 
     const colleagueAvatars = colleagueUsers.map(u => u.avatar).filter(Boolean);
 
-    const myAttendance = await Attendance
-      .findOne({ userId, date: { $gte: start, $lte: end } })
-      .lean();
-
     return res.status(200).json({
       success: true,
       data: {
-        scheduleId:      schedule._id,
-        scheduledDate:   schedule.scheduledDate,
-        dish:            schedule.dish,
+        scheduleId:        schedule._id,
+        scheduledDate:     schedule.scheduledDate,
+        dish:              schedule.dish,
         colleaguesEating,
         colleagueAvatars,
-        myResponse:      myAttendance?.response ?? null,
+        myResponse:        myAttendance?.response ?? null,
+        deliveryCompleted: delivery?.status === "handed_over" ?? false,
       },
     });
   } catch (err) {

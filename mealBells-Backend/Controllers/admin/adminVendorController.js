@@ -74,10 +74,25 @@ export const addVendor = async (req, res) => {
 };
 
 // ── Get All Vendors ───────────────────────────────────────────────────────────
+// ── Get All Vendors ───────────────────────────────────────────────────────────
 export const getVendors = async (req, res) => {
   try {
+    // req.user is the logged-in admin
+    const admin = await userModel.findById(req.user.id).select("organizationId").lean();
+    if (!admin) return res.status(404).json({ msg: "Admin not found" });
+
+    const adminOrgIds = admin.organizationId; // array of ObjectIds
+
+    if (!adminOrgIds || adminOrgIds.length === 0) {
+      return res.status(200).json({ success: true, vendors: [] });
+    }
+
+    // Find vendors whose organizationId array contains ANY of the admin's org IDs
     const vendors = await userModel
-      .find({ type: "vendor" })
+      .find({
+        type:           "vendor",
+        organizationId: { $in: adminOrgIds },
+      })
       .select("-password")
       .sort({ createdAt: -1 });
 
@@ -87,7 +102,6 @@ export const getVendors = async (req, res) => {
     return res.status(500).json({ msg: "Internal error: " + err.message });
   }
 };
-
 // ── Toggle Vendor Status ──────────────────────────────────────────────────────
 export const toggleVendorStatus = async (req, res) => {
   try {

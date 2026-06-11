@@ -16,6 +16,7 @@ import {
   LogOut,
   PanelLeftClose,
   X,
+  Building2,
 } from "lucide-react";
 
 import adminPanelHeaderIcon from "../../assets/adminPanelHeaderIcon.png";
@@ -29,6 +30,7 @@ const navItems = [
   { label: "Delivery",         path: "/vendor/delivery",         icon: Truck },
   { label: "Reviews",          path: "/vendor/reviews",          icon: Star },
   { label: "Reports",          path: "/vendor/reports",          icon: BarChart3 },
+  { label: "Organizations",    path: "/vendor/organizations",    icon: Building2 },  // ← new
 ];
 
 const bottomItems = [
@@ -37,19 +39,10 @@ const bottomItems = [
 
 function getIsActive(path: string, currentPath: string): boolean {
   if (currentPath === path) return true;
-
-  // /vendor → dashboard
   if (path === "/vendor/dashboard" && currentPath === "/vendor") return true;
-
-  // Today's Menu: only its own edit route, NOT the weekly edit route
   if (path === "/vendor/menu" && currentPath === "/vendor/menu/edit") return true;
-
-  // Weekly Menu: highlights for both weekly view and weekly edit
-  if (
-    path === "/vendor/menu/weekly" &&
-    currentPath.startsWith("/vendor/menu/weekly")
-  ) return true;
-
+  if (path === "/vendor/menu/weekly" && currentPath.startsWith("/vendor/menu/weekly")) return true;
+  if (path === "/vendor/organizations" && currentPath.startsWith("/vendor/organizations")) return true;
   return false;
 }
 
@@ -71,10 +64,7 @@ export default function VendorSidebar() {
   return (
     <>
       {mobileExpanded && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={closeMobile}
-        />
+        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={closeMobile} />
       )}
 
       <div className="relative h-full w-14 lg:w-52 shrink-0">
@@ -105,18 +95,13 @@ export default function VendorSidebar() {
             <div className="flex items-center justify-between px-3">
               <div className="flex items-center gap-2.5 w-full">
                 <div className="w-8 h-8 rounded-lg bg-[#FF7A00] flex items-center justify-center shrink-0 mx-auto lg:mx-0">
-                  <img
-                    src={adminPanelHeaderIcon}
-                    alt="MealBells"
-                    className="w-5 h-5 object-contain"
-                  />
+                  <img src={adminPanelHeaderIcon} alt="MealBells" className="w-5 h-5 object-contain" />
                 </div>
                 <div className={`flex-col leading-tight ${mobileExpanded ? "flex" : "hidden"} lg:flex`}>
                   <span className="text-white font-bold text-sm">MealBells</span>
                   <span className="text-[#94A3B8] text-xs">Vendor Portal</span>
                 </div>
               </div>
-
               {mobileExpanded && (
                 <button onClick={closeMobile} className="lg:hidden text-[#94A3B8] hover:text-white p-1 shrink-0">
                   <X className="w-5 h-5" />

@@ -26,7 +26,7 @@ const userSchema = new Schema(
     // ── type ─────────────────────────────────────────────
     type: {
   type:    String,
-  enum:    ["user", "vendor", "admin"],
+  enum:    ["user", "vendor", "admin", "super_admin"],
   default: "user",
 },
 
@@ -40,12 +40,11 @@ const userSchema = new Schema(
       type:    String,
       default: "",
     },
-    organizationId: {
-      type:    mongoose.Schema.Types.ObjectId,
+     organizationId: {
+      type:    [mongoose.Schema.Types.ObjectId],
       ref:     "organizations",
-      default: null,
+      default: [],
     },
-
     // ── user (employee) only ──────────────────────────────
     gender: {
       type:    String,
@@ -59,7 +58,7 @@ const userSchema = new Schema(
     },
     role: {
       type:    String,
-      enum:    ["Standard User", "Department Head", "System Admin","Vendor"],
+      enum:    ["Standard User", "Department Head", "System Admin","Vendor" ,"Super Admin"],
       default: "Standard User",
     },
     active: {

@@ -24,6 +24,7 @@ export interface MenuData {
   colleaguesEating: number;
   colleagueAvatars: string[];
   myResponse:       "yes" | "no" | null;
+  deliveryCompleted:   boolean;  
 }
 
 export interface WeeklyMenuItem {

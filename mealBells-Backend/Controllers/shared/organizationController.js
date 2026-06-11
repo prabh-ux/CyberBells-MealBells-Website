@@ -30,15 +30,17 @@ export const updateMyOrganization = async (req, res) => {
       mealTime,
       cutoffTime,
       allowDishRequests,
+      capacity,           // ← new
     } = req.body;
 
     const updates = {
-      ...(companyName        !== undefined && { companyName }),
-      ...(contactEmail       !== undefined && { contactEmail }),
-      ...(officeAddress      !== undefined && { officeAddress }),
-      ...(mealTime           !== undefined && { mealTime }),
-      ...(cutoffTime         !== undefined && { cutoffTime }),
-      ...(allowDishRequests  !== undefined && { allowDishRequests }),
+      ...(companyName       !== undefined && { companyName }),
+      ...(contactEmail      !== undefined && { contactEmail }),
+      ...(officeAddress     !== undefined && { officeAddress }),
+      ...(mealTime          !== undefined && { mealTime }),
+      ...(cutoffTime        !== undefined && { cutoffTime }),
+      ...(allowDishRequests !== undefined && { allowDishRequests }),
+      ...(capacity          !== undefined && { capacity: Number(capacity) }), // ← new
     };
 
     let org;
@@ -50,7 +52,6 @@ export const updateMyOrganization = async (req, res) => {
         { new: true }
       );
     } else {
-      // First save — create org and link to user
       org = await organizationModel.create(updates);
       await userModel.findByIdAndUpdate(req.user.id, { organizationId: org._id });
     }

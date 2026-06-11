@@ -20,7 +20,12 @@ import {
   getVendorDishRequests,
   respondToDishRequest,
 } from "../Controllers/vendor/vendorDishRequestController.js";
- 
+ import {
+  getVendorOrganizations,
+  createVendorOrganization,
+  toggleVendorOrgStatus,
+  updateVendorOrg,
+} from "../Controllers/vendor/vendorOrganizationController.js";
 const router = Router();
 
 const upload = (fieldName) => (req, res, next) => {
@@ -61,4 +66,10 @@ router.get("/reviews", getVendorReviews);
 //requested dishes
 router.get  ("/dish-requests",                getVendorDishRequests);
 router.patch("/dish-requests/:id/respond",    respondToDishRequest);
+
+
+router.get  ("/organizations",                   getVendorOrganizations);
+router.post ("/organizations",                   createVendorOrganization);
+router.patch("/organizations/:id/toggle-status", toggleVendorOrgStatus);
+router.put  ("/organizations/:id",               updateVendorOrg);
 export default router;

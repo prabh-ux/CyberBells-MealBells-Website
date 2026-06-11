@@ -6,6 +6,21 @@ import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { userModel }    from "../../Models/user.js";
 import { dishModel }    from "../../Models/dish.js";
 
+// ── Shared: get admin's organizationId ───────────────────────────────────────
+const getAdminOrgId = async (adminUserId) => {
+  const admin = await userModel.findById(adminUserId).select("organizationId").lean();
+  return admin?.organizationId ?? null;
+};
+
+// ── Shared: get all active user IDs in an org ─────────────────────────────────
+const getOrgUserIds = async (organizationId) => {
+  const users = await userModel.find(
+    { type: "user", active: true, organizationId },
+    "_id"
+  ).lean();
+  return users.map((u) => u._id);
+};
+
 const dayBounds = (date = new Date()) => {
   const start = new Date(date); start.setHours(0,  0,  0,   0);
   const end   = new Date(date); end.setHours(23, 59, 59, 999);
@@ -19,7 +34,7 @@ const resolveScheduleId = async ({ date, vendorId, mealType }) => {
   const scheduleFilter  = { scheduledDate: { $gte: start, $lte: end } };
 
   if (mealType && mealType !== "all" && mealType !== "Both") {
-const dishes = await dishModel.find({ dishType: mealType }, "_id").lean();
+    const dishes = await dishModel.find({ dishType: mealType }, "_id").lean();
     if (!dishes.length) return null;
     scheduleFilter.dish = { $in: dishes.map(d => d._id) };
   }
@@ -38,7 +53,8 @@ const dishes = await dishModel.find({ dishType: mealType }, "_id").lean();
   return schedule._id;
 };
 
-const getDayMetrics = async ({ date, vendorId, mealType }) => {
+// ── getDayMetrics now accepts orgUserIds to scope attendance counts ───────────
+const getDayMetrics = async ({ date, vendorId, mealType, orgUserIds }) => {
   const { start, end } = dayBounds(date);
 
   // ✅ No filters = vendor is "all" AND mealType is "all" or "Both"
@@ -47,11 +63,15 @@ const getDayMetrics = async ({ date, vendorId, mealType }) => {
     (!mealType || mealType === "all" || mealType === "Both");
 
   if (noFilters) {
-    const totalUsers = await userModel.countDocuments({ type: "user", active: true });
-    const eaten      = await Attendance.countDocuments({
+    // totalUsers scoped to org
+    const totalUsers = orgUserIds.length;
+
+    const eaten = await Attendance.countDocuments({
+      userId:   { $in: orgUserIds },
       date:     { $gte: start, $lte: end },
       response: "yes",
     });
+
     const wastage        = Math.max(0, totalUsers - eaten);
     const wastagePercent = totalUsers > 0
       ? +((wastage / totalUsers) * 100).toFixed(1)
@@ -74,15 +94,18 @@ const getDayMetrics = async ({ date, vendorId, mealType }) => {
     return { expected: 0, delivered: 0, eaten: 0, wastage: 0, wastagePercent: 0 };
   }
 
+  // Scope expected and eaten to org users
   const expected = await Attendance.countDocuments({
+    userId:     { $in: orgUserIds },
     scheduleId,
-    date: { $gte: start, $lte: end },
+    date:       { $gte: start, $lte: end },
   });
 
   const eaten = await Attendance.countDocuments({
+    userId:     { $in: orgUserIds },
     scheduleId,
-    date:     { $gte: start, $lte: end },
-    response: "yes",
+    date:       { $gte: start, $lte: end },
+    response:   "yes",
   });
 
   const wastage        = Math.max(0, expected - eaten);
@@ -113,16 +136,21 @@ export const getWastageVendors = async (req, res) => {
 // ── GET /admin/food-wastage/summary ──────────────────────────────────────────
 export const getFoodWastageSummary = async (req, res) => {
   try {
-    const vendorId = req.query.vendor   || "all";
-    const mealType = req.query.mealType || "Both";
-    const days     = Math.min(parseInt(req.query.days) || 7, 90);
-    const now      = new Date();
-    const results  = [];
+    const vendorId    = req.query.vendor   || "all";
+    const mealType    = req.query.mealType || "Both";
+    const days        = Math.min(parseInt(req.query.days) || 7, 90);
+    const adminUserId = req.user.id;
+
+    const organizationId = await getAdminOrgId(adminUserId);
+    const orgUserIds     = organizationId ? await getOrgUserIds(organizationId) : [];
+
+    const now     = new Date();
+    const results = [];
 
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
-      const m = await getDayMetrics({ date, vendorId, mealType });
+      const m = await getDayMetrics({ date, vendorId, mealType, orgUserIds });
       results.push({ date: date.toISOString().split("T")[0], ...m });
     }
 
@@ -140,15 +168,15 @@ export const getFoodWastageSummary = async (req, res) => {
       ? +((totalEaten / totalExpected) * 100).toFixed(1)
       : 0;
 
-    const half   = Math.floor(results.length / 2);
-    const fH     = results.slice(0, half);
-    const sH     = results.slice(half);
-    const fExp   = fH.reduce((s, r) => s + r.expected, 0);
-    const sExp   = sH.reduce((s, r) => s + r.expected, 0);
-    const fW     = fH.reduce((s, r) => s + r.wastage,  0);
-    const sW     = sH.reduce((s, r) => s + r.wastage,  0);
-    const fPct   = fExp > 0 ? (fW / fExp) * 100 : 0;
-    const sPct   = sExp > 0 ? (sW / sExp) * 100 : 0;
+    const half = Math.floor(results.length / 2);
+    const fH   = results.slice(0, half);
+    const sH   = results.slice(half);
+    const fExp = fH.reduce((s, r) => s + r.expected, 0);
+    const sExp = sH.reduce((s, r) => s + r.expected, 0);
+    const fW   = fH.reduce((s, r) => s + r.wastage,  0);
+    const sW   = sH.reduce((s, r) => s + r.wastage,  0);
+    const fPct = fExp > 0 ? (fW / fExp) * 100 : 0;
+    const sPct = sExp > 0 ? (sW / sExp) * 100 : 0;
     const wasteTrend = fPct > 0
       ? +((sPct - fPct) / fPct * 100).toFixed(1)
       : null;
@@ -166,18 +194,23 @@ export const getFoodWastageSummary = async (req, res) => {
 // ── GET /admin/food-wastage/chart ─────────────────────────────────────────────
 export const getFoodWastageChart = async (req, res) => {
   try {
-    const vendorId = req.query.vendor   || "all";
-    const mealType = req.query.mealType || "Both";
-    const days     = Math.min(parseInt(req.query.days) || 7, 30);
-    const DAYS     = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
-    const now      = new Date();
-    const data     = [];
+    const vendorId    = req.query.vendor   || "all";
+    const mealType    = req.query.mealType || "Both";
+    const days        = Math.min(parseInt(req.query.days) || 7, 30);
+    const adminUserId = req.user.id;
+
+    const organizationId = await getAdminOrgId(adminUserId);
+    const orgUserIds     = organizationId ? await getOrgUserIds(organizationId) : [];
+
+    const DAYS = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+    const now  = new Date();
+    const data = [];
 
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
       const { expected, delivered, eaten, wastage } =
-        await getDayMetrics({ date, vendorId, mealType });
+        await getDayMetrics({ date, vendorId, mealType, orgUserIds });
       data.push({
         day:       DAYS[date.getDay()],
         fullDate:  date.toISOString().split("T")[0],
@@ -197,19 +230,24 @@ export const getFoodWastageChart = async (req, res) => {
 // ── GET /admin/food-wastage/table ─────────────────────────────────────────────
 export const getFoodWastageTable = async (req, res) => {
   try {
-    const vendorId = req.query.vendor   || "all";
-    const mealType = req.query.mealType || "Both";
-    const page     = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit    = Math.min(   parseInt(req.query.limit) || 5, 31);
-    const days     = Math.min(parseInt(req.query.days) || 7, 31);
-    const now      = new Date();
-    const allRows  = [];
+    const vendorId    = req.query.vendor   || "all";
+    const mealType    = req.query.mealType || "Both";
+    const page        = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit       = Math.min(   parseInt(req.query.limit) || 5, 31);
+    const days        = Math.min(parseInt(req.query.days) || 7, 31);
+    const adminUserId = req.user.id;
+
+    const organizationId = await getAdminOrgId(adminUserId);
+    const orgUserIds     = organizationId ? await getOrgUserIds(organizationId) : [];
+
+    const now     = new Date();
+    const allRows = [];
 
     for (let i = 0; i < days; i++) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
       const { expected, delivered, eaten, wastage, wastagePercent } =
-        await getDayMetrics({ date, vendorId, mealType });
+        await getDayMetrics({ date, vendorId, mealType, orgUserIds });
       allRows.push({
         date:          date.toLocaleDateString("en-US", { month: "short", day: "2-digit" }),
         fullDate:      date.toISOString().split("T")[0],

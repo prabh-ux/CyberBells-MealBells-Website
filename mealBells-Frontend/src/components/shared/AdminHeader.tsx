@@ -219,7 +219,7 @@ const AdminHeader = () => {
           {/* Mobile results */}
           {open && results.length > 0 && (
             <ul className="pb-1">
-              {results.map((item, i) => (
+              {results.map((item) => (
                 <li key={item.path}>
                   <button
                     type="button"

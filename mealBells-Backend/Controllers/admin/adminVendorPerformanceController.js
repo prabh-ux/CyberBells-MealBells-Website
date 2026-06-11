@@ -26,14 +26,26 @@ const toLocalKey = (date) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// ── Org helpers ───────────────────────────────────────────────────────────────
+const getAdminOrgId = async (adminUserId) => {
+  const admin = await userModel.findById(adminUserId).select("organizationId").lean();
+  return admin?.organizationId ?? null;
+};
+
+// Returns active user ObjectIds for the org, or null if no org found.
+// Callers that receive null should skip user-scoped filtering (fail-safe).
+const getOrgUserIds = async (organizationId) => {
+  if (!organizationId) return null;
+  const users = await userModel.find(
+    { type: "user", active: true, organizationId },
+    "_id"
+  ).lean();
+  return users.map((u) => u._id);
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
-// BUG FIX #1: MenuSchedule has NO vendorId field.
-// The only way to scope schedules to a vendor is:
-//   MenuSchedule.dish → Dish.vendor (ObjectId)
-// So we must:
-//   1. Find all dish _ids where dish.vendor === vendorOid
-//   2. Find all MenuSchedule where schedule.dish is in those dish ids
-// This replaces every previous MenuSchedule.find({ vendorId }) call.
+// MenuSchedule has NO vendorId field.
+// Scope schedules to a vendor via: Dish.vendor → MenuSchedule.dish
 // ─────────────────────────────────────────────────────────────────────────────
 const getVendorDishIds = async (vendorOid, availability) => {
   const query = { vendor: vendorOid };
@@ -50,14 +62,7 @@ const getSchedulesForDishes = async (dishIds, start, end) => {
   ).lean();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BUG FIX #2: Menu Accuracy was computed as:
-//   reviews where taste>=7 && quantity>=7 && quality>=7 && freshness>=7
-// That is a quality score, NOT accuracy.
-// "Menu Accuracy" should mean: of all scheduled menus in the period,
-// how many were actually delivered (status = handed_over)?
-//   accuracy = (schedules with handed_over delivery / total schedules) * 100
-// ─────────────────────────────────────────────────────────────────────────────
+// Accuracy = schedules actually delivered (handed_over) / total scheduled * 100
 const computeAccuracy = async (scheduleIds) => {
   if (!scheduleIds.length) return 0;
   const total     = scheduleIds.length;
@@ -68,7 +73,6 @@ const computeAccuracy = async (scheduleIds) => {
   return Math.round((delivered / total) * 100);
 };
 
-// ─── Zeroed-out fallback ──────────────────────────────────────────────────────
 const emptyResponse = () => ({
   timeliness: 0, timelinessChange: null,
   rating:     0, ratingChange:     null, ratingReviews: 0,
@@ -85,10 +89,11 @@ const emptyResponse = () => ({
 // ── GET /admin/vendor-performance/:vendorId?period=Full+Time ──────────────────
 export const getVendorPerformance = async (req, res) => {
   try {
-    const { vendorId } = req.params;
-    const period       = req.query.period ?? "Full Time";
-    const availability = PERIOD_TO_AVAILABILITY[period]; // undefined for "Full Time" = no filter
-    const isAll        = vendorId === "all";
+    const { vendorId }  = req.params;
+    const period        = req.query.period ?? "Full Time";
+    const availability  = PERIOD_TO_AVAILABILITY[period];
+    const isAll         = vendorId === "all";
+    const adminUserId   = req.user.id;
 
     const vendorOid = (!isAll && mongoose.Types.ObjectId.isValid(vendorId))
       ? new mongoose.Types.ObjectId(vendorId)
@@ -97,14 +102,16 @@ export const getVendorPerformance = async (req, res) => {
     if (!isAll && !vendorOid)
       return res.status(400).json({ success: false, msg: "Invalid vendorId." });
 
+    // ── Resolve admin's org user IDs (used to scope reviews) ─────────────────
+    const organizationId = await getAdminOrgId(adminUserId);
+    const orgUserIds     = await getOrgUserIds(organizationId);
+
     // ── Date ranges ───────────────────────────────────────────────────────────
     const { start, end } = rangeFromNow(30);
     const prevEnd        = new Date(start.getTime() - 1);
     const prevStart      = new Date(start.getTime() - (end.getTime() - start.getTime()));
 
-    // ── Resolve dish ids & schedules (current period) ─────────────────────────
-    // BUG FIX: for a specific vendor we MUST go Dish→Schedule because
-    // MenuSchedule has no vendorId field.
+    // ── Schedules (current period) ────────────────────────────────────────────
     let currentSchedules = [];
 
     if (isAll) {
@@ -119,29 +126,29 @@ export const getVendorPerformance = async (req, res) => {
       currentSchedules = await getSchedulesForDishes(vendorDishIds, start, end);
     }
 
-    const currentScheduleIds  = currentSchedules.map(s => s._id);
-    const scheduleIdToDate    = Object.fromEntries(
-      currentSchedules.map(s => [String(s._id), s.scheduledDate])
-    );
+    const currentScheduleIds = currentSchedules.map(s => s._id);
 
     console.log(`[VendorPerf] vendorId=${vendorId} | period=${period} | schedules=${currentScheduleIds.length}`);
 
-    // ── Reviews (current period) ──────────────────────────────────────────────
-    // BUG FIX: reviews are found by scheduleId which links to MenuSchedule._id —
-    // this now works correctly because currentScheduleIds is properly scoped
-    // via Dish.vendor → MenuSchedule.dish (not the missing MenuSchedule.vendorId).
-    const allReviews = await Review.find({ scheduleId: { $in: currentScheduleIds } })
+    // ── Reviews (current period, scoped to org users) ─────────────────────────
+    // Reviews reflect what *this org's* users thought of the vendor —
+    // an admin should not see reviews from other organizations' employees.
+    const reviewFilter = { scheduleId: { $in: currentScheduleIds } };
+    if (orgUserIds) reviewFilter.userId = { $in: orgUserIds };
+
+    const allReviews = await Review.find(reviewFilter)
       .populate({ path: "dishId",     select: "name image vendor" })
       .populate({ path: "scheduleId", select: "scheduledDate"     })
       .lean();
 
-    // For a specific vendor, defensively filter reviews whose dish.vendor matches.
-    // For "all", keep everything.
+    // For a specific vendor, defensively filter by dish.vendor match.
     const reviews = isAll
       ? allReviews
       : allReviews.filter(r => r.dishId && String(r.dishId.vendor) === String(vendorId));
 
     // ── Deliveries (current period) ───────────────────────────────────────────
+    // Deliveries are platform-level (not org-scoped) — they represent the
+    // vendor's actual delivery actions, not user activity.
     const deliveries   = await Delivery.find({ scheduleId: { $in: currentScheduleIds } }).lean();
     const totalReviews = reviews.length;
     const totalDel     = deliveries.length;
@@ -150,12 +157,10 @@ export const getVendorPerformance = async (req, res) => {
 
     // ── KPIs ──────────────────────────────────────────────────────────────────
 
-    // Rating: overallRating is 1–5
     const avgRating = totalReviews
       ? +(reviews.reduce((s, r) => s + r.overallRating, 0) / totalReviews).toFixed(1)
       : 0;
 
-    // Quality: composite of sub-scores (each 0–10), expressed as 0–100
     const avgQuality = totalReviews
       ? Math.round(
           reviews.reduce(
@@ -164,15 +169,12 @@ export const getVendorPerformance = async (req, res) => {
         )
       : 0;
 
-    // BUG FIX: Accuracy = scheduled menus actually delivered / total scheduled * 100
     const accuracy = await computeAccuracy(currentScheduleIds);
 
-    // Positive sentiment: reviews with overallRating >= 4 (out of 5)
     const positives = totalReviews
       ? Math.round((reviews.filter(r => r.overallRating >= 4).length / totalReviews) * 100)
       : 0;
 
-    // Timeliness: deliveries that reached arrived_at_office or handed_over
     const completedDel = deliveries.filter(d =>
       ["arrived_at_office", "handed_over"].includes(d.status)
     );
@@ -194,7 +196,7 @@ export const getVendorPerformance = async (req, res) => {
       chartSchedules = await getSchedulesForDishes(vendorDishIds, chartStart, end);
     }
 
-    const chartScheduleIds    = chartSchedules.map(s => s._id);
+    const chartScheduleIds     = chartSchedules.map(s => s._id);
     const chartScheduleDateMap = Object.fromEntries(
       chartSchedules.map(s => [String(s._id), s.scheduledDate])
     );
@@ -215,16 +217,15 @@ export const getVendorPerformance = async (req, res) => {
       return { day: DAY_MAP[dt.getDay()], actual: deliveryByDay[key] ?? 0, target: 1 };
     });
 
-    // ── Weekly rating trend ───────────────────────────────────────────────────
+    // ── Weekly rating trend (org-scoped reviews) ──────────────────────────────
     const ratingTrend = WEEK_MAP.map((week, wi) => {
       const weeksAgo = 3 - wi;
-      const wEnd   = new Date(); wEnd.setDate(wEnd.getDate() -  weeksAgo      * 7); wEnd.setHours(23, 59, 59, 999);
+      const wEnd   = new Date(); wEnd.setDate(wEnd.getDate() -  weeksAgo          * 7); wEnd.setHours(23, 59, 59, 999);
       const wStart = new Date(); wStart.setDate(wStart.getDate() - (weeksAgo + 1) * 7); wStart.setHours(0, 0, 0, 0);
       const slice  = reviews.filter(r => {
         const d = new Date(r.scheduleId?.scheduledDate ?? r.createdAt);
         return d >= wStart && d <= wEnd;
       });
-      // overallRating is 1–5, scale to 0–100 by * 20
       return {
         week,
         v: slice.length
@@ -233,7 +234,7 @@ export const getVendorPerformance = async (req, res) => {
       };
     });
 
-    // ── Recent feedback ───────────────────────────────────────────────────────
+    // ── Recent feedback (org-scoped reviews) ──────────────────────────────────
     const recentFeedback = reviews
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 10)
@@ -251,7 +252,7 @@ export const getVendorPerformance = async (req, res) => {
         };
       });
 
-    // ── Previous period (delta chips) ─────────────────────────────────────────
+    // ── Previous period deltas (reviews also org-scoped) ──────────────────────
     let prevSchedules = [];
 
     if (isAll) {
@@ -266,7 +267,10 @@ export const getVendorPerformance = async (req, res) => {
 
     const prevScheduleIds = prevSchedules.map(s => s._id);
 
-    const allPrevReviews = await Review.find({ scheduleId: { $in: prevScheduleIds } })
+    const prevReviewFilter = { scheduleId: { $in: prevScheduleIds } };
+    if (orgUserIds) prevReviewFilter.userId = { $in: orgUserIds };
+
+    const allPrevReviews = await Review.find(prevReviewFilter)
       .populate({ path: "dishId", select: "vendor" })
       .lean();
 
@@ -287,7 +291,6 @@ export const getVendorPerformance = async (req, res) => {
       ? Math.round((prevCompletedDel.length / prevDeliveries.length) * 100)
       : null;
 
-    // BUG FIX: prevAccuracy also uses delivery-based calculation now
     const prevAccuracy = prevScheduleIds.length
       ? await computeAccuracy(prevScheduleIds)
       : null;
@@ -316,6 +319,7 @@ export const getVendorPerformance = async (req, res) => {
 };
 
 // ── GET /admin/vendor-performance/vendors ─────────────────────────────────────
+// Vendors are platform-level — all admins see the same vendor list.
 export const getVendorList = async (req, res) => {
   try {
     const vendors = await userModel

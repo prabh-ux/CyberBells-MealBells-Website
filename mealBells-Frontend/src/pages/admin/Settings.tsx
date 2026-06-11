@@ -27,6 +27,7 @@ const FORM_DEFAULT: FormState = {
   mealTime:          "12:30",
   cutoffTime:        "09:00",
   allowDishRequests: true,
+    capacity:          0,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -250,19 +251,19 @@ export default function Settings() {
     dispatch(fetchOrganization());
   }, [dispatch]);
 
-  // ── Sync Redux → form
-  useEffect(() => {
-    if (orgData) {
-      setForm({
-        companyName:       orgData.companyName      ?? "",
-        contactEmail:      orgData.contactEmail      ?? "",
-        officeAddress:     orgData.officeAddress     ?? "",
-        mealTime:          orgData.mealTime          ?? "12:30",
-        cutoffTime:        orgData.cutoffTime        ?? "09:00",
-        allowDishRequests: orgData.allowDishRequests ?? true,
-      });
-    }
-  }, [orgData]);
+useEffect(() => {
+  if (orgData) {
+    setForm({
+      companyName:       orgData.companyName      ?? "",
+      contactEmail:      orgData.contactEmail      ?? "",
+      officeAddress:     orgData.officeAddress     ?? "",
+      mealTime:          orgData.mealTime          ?? "12:30",
+      cutoffTime:        orgData.cutoffTime        ?? "09:00",
+      allowDishRequests: orgData.allowDishRequests ?? true,
+      capacity:          orgData.capacity          ?? 0,  
+    });
+  }
+}, [orgData]);
 
   const handleSave = async () => {
     const result = await dispatch(updateOrganization(form));

@@ -1,7 +1,14 @@
+// Controllers/admin/adminUserController.js
 import { userModel }   from "../../Models/user.js";
 import bcrypt          from "bcrypt";
 import cloudinary      from "../../utils/cloudnary.js";
 import { logActivity } from "../../utils/logActivity.js";
+
+// ── Shared: get admin's organizationId ───────────────────────────────────────
+const getAdminOrgId = async (adminUserId) => {
+  const admin = await userModel.findById(adminUserId).select("organizationId").lean();
+  return admin?.organizationId ?? null;
+};
 
 // ── Add User ──────────────────────────────────────────────────────────────────
 export const addUser = async (req, res) => {
@@ -26,8 +33,8 @@ export const addUser = async (req, res) => {
     const avatarPublicId = req.file?.filename || "";
 
     const tempPassword = Math.random().toString(36).slice(-8);
-const capitalized  = tempPassword.charAt(0).toUpperCase() + tempPassword.slice(1);
-const hashed       = await bcrypt.hash(capitalized, 10);
+    const capitalized  = tempPassword.charAt(0).toUpperCase() + tempPassword.slice(1);
+    const hashed       = await bcrypt.hash(capitalized, 10);
 
     const user = await userModel.create({
       type:           "user",
@@ -41,7 +48,7 @@ const hashed       = await bcrypt.hash(capitalized, 10);
       avatar:         avatarUrl,
       avatarPublicId,
       password:       hashed,
-      organizationId: admin.organizationId,   // ← key fix
+      organizationId: admin.organizationId,
     });
 
     await logActivity({
@@ -79,7 +86,13 @@ const hashed       = await bcrypt.hash(capitalized, 10);
 // ── Toggle User Status ────────────────────────────────────────────────────────
 export const toggleUserStatus = async (req, res) => {
   try {
-    const user = await userModel.findById(req.params.id);
+    const organizationId = await getAdminOrgId(req.user.id);
+
+    const user = await userModel.findOne({
+      _id:  req.params.id,
+      type: "user",
+      ...(organizationId ? { organizationId } : {}),
+    });
     if (!user) return res.status(404).json({ msg: "User not found" });
 
     const currentActive = req.body.active ?? user.active;
@@ -108,10 +121,16 @@ export const toggleUserStatus = async (req, res) => {
 };
 
 // ── Get All Users ─────────────────────────────────────────────────────────────
+// Only returns users in the same organization as the admin.
 export const getUsers = async (req, res) => {
   try {
+    const organizationId = await getAdminOrgId(req.user.id);
+
+    const filter = { type: "user" };
+    if (organizationId) filter.organizationId = organizationId;
+
     const users = await userModel
-      .find({ type: "user" })
+      .find(filter)
       .select("-password -avatarPublicId")
       .sort({ createdAt: -1 });
 
@@ -123,12 +142,18 @@ export const getUsers = async (req, res) => {
 };
 
 // ── Get Single User ───────────────────────────────────────────────────────────
+// Ensures the requested user belongs to the admin's org.
 export const getUserById = async (req, res) => {
   try {
-    const user = await userModel
-      .findById(req.params.id)
-      .select("-password -avatarPublicId");
+    const organizationId = await getAdminOrgId(req.user.id);
 
+    const query = {
+      _id:  req.params.id,
+      type: "user",
+      ...(organizationId ? { organizationId } : {}),
+    };
+
+    const user = await userModel.findOne(query).select("-password -avatarPublicId");
     if (!user) return res.status(404).json({ msg: "User not found" });
 
     return res.status(200).json({ success: true, user });
@@ -143,7 +168,13 @@ export const updateUser = async (req, res) => {
   try {
     const { fullName, email, phone, gender, department, role, active } = req.body;
 
-    const user = await userModel.findById(req.params.id);
+    const organizationId = await getAdminOrgId(req.user.id);
+
+    const user = await userModel.findOne({
+      _id:  req.params.id,
+      type: "user",
+      ...(organizationId ? { organizationId } : {}),
+    });
     if (!user) return res.status(404).json({ msg: "User not found" });
 
     if (email && email !== user.email) {
@@ -196,7 +227,13 @@ export const updateUser = async (req, res) => {
 // ── Delete User ───────────────────────────────────────────────────────────────
 export const deleteUser = async (req, res) => {
   try {
-    const user = await userModel.findById(req.params.id);
+    const organizationId = await getAdminOrgId(req.user.id);
+
+    const user = await userModel.findOne({
+      _id:  req.params.id,
+      type: "user",
+      ...(organizationId ? { organizationId } : {}),
+    });
     if (!user) return res.status(404).json({ msg: "User not found" });
 
     if (user.avatarPublicId) {

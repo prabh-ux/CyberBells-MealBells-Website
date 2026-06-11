@@ -4,6 +4,7 @@ import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { Attendance }   from "../../Models/attendance.js";
 import { Review }       from "../../Models/review.js";
 import { userModel }    from "../../Models/user.js";
+import { Delivery }     from "../../Models/delivery.js";   // ← add this import
 
 const getUTCMidnight = (offsetDays = 0) => {
   const d = new Date();
@@ -62,11 +63,15 @@ export const getVendorDashboard = async (req, res) => {
       });
     }
 
-    const todayAttendance = await Attendance.find({
-      scheduleId: todaySchedule._id,
-    }).lean();
+    const [todayAttendance, todayDelivery] = await Promise.all([
+      Attendance.find({ scheduleId: todaySchedule._id }).lean(),
+      Delivery.findOne({ scheduleId: todaySchedule._id, vendorId }).lean(),
+    ]);
 
     const presentToday = todayAttendance.filter(a => a.response === "yes").length;
+
+    // Once handed_over, nothing is pending anymore
+    const pendingDelivery = todayDelivery?.status === "handed_over" ? 0 : presentToday;
 
     const totalOrgUsers = await userModel.countDocuments({
       organizationId: req.user.organizationId ?? null,
@@ -74,9 +79,6 @@ export const getVendorDashboard = async (req, res) => {
       active:         true,
     });
     const absentToday = Math.max(0, totalOrgUsers - presentToday);
-
-    const todayOrders     = presentToday;
-    const pendingDelivery = presentToday;
 
     const todayReviews = await Review.aggregate([
       {
@@ -102,8 +104,8 @@ export const getVendorDashboard = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        todayOrders,
-        pendingDelivery,
+        todayOrders:     presentToday,
+        pendingDelivery,              // ← 0 when handed_over, else presentToday
         reviewsToday,
         mealsThisWeek,
         attendance: { present: presentToday, absent: absentToday },

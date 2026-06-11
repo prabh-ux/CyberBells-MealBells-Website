@@ -50,8 +50,13 @@ export default function TodayMenuPanel() {
     return isPastCutoff(org.cutoffTime);
   }, [org?.cutoffTime]);
 
+  const deliveryCompleted = data?.deliveryCompleted ?? false;
+
+  // attendance is locked if either cutoff passed OR delivery is done
+  const attendanceLocked = cutoffPassed || deliveryCompleted;
+
   const handleAttendance = (response: "yes" | "no") => {
-    if (!data || voting || cutoffPassed) return;
+    if (!data || voting || attendanceLocked) return;
     dispatch(markAttendance({ response, scheduleId: data.scheduleId }));
   };
 
@@ -75,6 +80,19 @@ export default function TodayMenuPanel() {
   const { dish, colleaguesEating, colleagueAvatars, myResponse } = data;
   const visibleAvatars = colleagueAvatars.slice(0, 3);
   const overflowCount  = Math.max(0, colleaguesEating - visibleAvatars.length);
+
+  // ── Lock reason text ──────────────────────────────────────────────────────
+  const lockReason = deliveryCompleted
+    ? "Delivery has been completed. Attendance can no longer be changed."
+    : (
+        <>
+          The cutoff time was{" "}
+          <span className="font-semibold text-gray-600">
+            {org?.cutoffTime ? formatTime(org.cutoffTime) : "—"}
+          </span>
+          . Attendance can no longer be changed for today.
+        </>
+      );
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] p-4 sm:p-6 lg:p-8 xl:p-10">
@@ -166,18 +184,17 @@ export default function TodayMenuPanel() {
               Are you eating today?
             </p>
 
-            {cutoffPassed ? (
+            {attendanceLocked ? (
+              /* ── Locked state (cutoff passed OR delivery completed) ── */
               <div className="flex flex-col items-center gap-3 py-4 sm:py-6">
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100 flex items-center justify-center">
                   <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                 </div>
-                <p className="text-sm sm:text-base font-semibold text-gray-500">Attendance Closed</p>
+                <p className="text-sm sm:text-base font-semibold text-gray-500">
+                  Attendance Closed
+                </p>
                 <p className="text-xs sm:text-sm text-gray-400 text-center max-w-xs">
-                  The cutoff time was{" "}
-                  <span className="font-semibold text-gray-600">
-                    {org?.cutoffTime ? formatTime(org.cutoffTime) : "—"}
-                  </span>
-                  . Attendance can no longer be changed for today.
+                  {lockReason}
                 </p>
                 {myResponse && (
                   <div className={`mt-2 text-center text-xs sm:text-sm font-semibold py-2.5 sm:py-3 px-5 sm:px-6 rounded-2xl flex items-center gap-2 ${
@@ -190,7 +207,9 @@ export default function TodayMenuPanel() {
                   </div>
                 )}
               </div>
+
             ) : (
+              /* ── Open state ── */
               <>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {/* YES */}

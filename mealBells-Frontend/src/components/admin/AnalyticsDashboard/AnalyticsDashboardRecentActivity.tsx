@@ -3,7 +3,6 @@ import searchIcon from "../../../assets/searchIcon.png";
 import actionBtns from "../../../assets/actionBtns.png";
 import DropDown from "../../shared/DropDown"; // adjust path to match your project structure
 
-const ALL_STATUSES = ["All", "Success", "Pending", "Critical"];
 const FILTER_OPTIONS = ["All", "Success", "Pending", "Critical"];
 
 const statusStyle: Record<string, string> = {

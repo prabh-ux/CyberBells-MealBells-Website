@@ -143,7 +143,7 @@ function SolidBarChart({ data, loading }: {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; day: string; value: number; fullDate: string } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseMove = useCallback(() => {
     if (hoveredIndex === null || !svgRef.current) return;
     const rect  = svgRef.current.getBoundingClientRect();
     const n     = data.length || 1;

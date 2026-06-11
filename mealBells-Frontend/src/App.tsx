@@ -8,6 +8,8 @@ import UserHeader from "./components/shared/UserHeader";
 import UserSidebar from "./components/shared/UserSidebar";
 import VendorHeader from "./components/shared/VendorHeader";
 import VendorSidebar from "./components/shared/VendorSidebar";
+import SuperAdminHeader from "./components/shared/SuperAdminHeader";
+import SuperAdminSidebar from "./components/shared/SuperAdminSidebar";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import FoodWastageReport from "./pages/admin/FoodWastageReport";
 import UserManagement from "./pages/admin/UserManagement";
@@ -52,11 +54,16 @@ import VendorSettings from "./pages/vendor/VendorSettings";
 import RequestedDishesByUsers from "./pages/admin/RequestedDishesByUsers";
 import AdminHelp from "./pages/admin/Adminhelp";
 
+import Organizations from "./pages/organization/Orgnaizations";
+import OrganizationManagement from "./pages/vendor/OrganizationManagementVendor";
+import AddOrganization from "./pages/vendor/AddOrganizationVendor";
+
 function App() {
   const location = useLocation();
-  const isAdminRoute  = location.pathname.startsWith("/admin");
-  const isUserRoute   = location.pathname.startsWith("/user");
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const isUserRoute = location.pathname.startsWith("/user");
   const isVendorRoute = location.pathname.startsWith("/vendor");
+  const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
 
   return (
     <div className="flex flex-col h-screen">
@@ -81,7 +88,9 @@ function App() {
         }}
       />
 
-      {isAdminRoute ? (
+      {isSuperAdminRoute ? (
+        <SuperAdminHeader />
+      ) : isAdminRoute ? (
         <AdminHeader />
       ) : isUserRoute ? (
         <UserHeader />
@@ -92,8 +101,9 @@ function App() {
       )}
 
       <div className="flex flex-1 min-h-0">
-        {isAdminRoute  && <AdminSidebar />}
-        {isUserRoute   && <UserSidebar />}
+        {isSuperAdminRoute && <SuperAdminSidebar />}
+        {isAdminRoute && <AdminSidebar />}
+        {isUserRoute && <UserSidebar />}
         {isVendorRoute && <VendorSidebar />}
 
         <main className="flex-1 bg-gray-50 overflow-y-auto">
@@ -105,32 +115,86 @@ function App() {
 
             {/* Auth — redirect to type-based home if already logged in */}
             <Route element={<ProtectedRoute redirectIfAuthed />}>
-              <Route path="/login"           element={<Login />} />
-              <Route path="/signup"          element={<Signup />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
             </Route>
 
-            {/* Admin — requires auth + admin type */}
-            <Route element={<ProtectedRoute requireAuth allowedTypes={["admin"]} />}>
+            {/* ── Super Admin — requires auth + super_admin type ── */}
+            {/* allowedTypes={["super_admin"]}  */}
+            <Route
+              element={<ProtectedRoute requireAuth allowedTypes={["admin"]} />}
+            >
+              <Route
+                path="/super-admin"
+                element={<Navigate to="/super-admin/organizations" replace />}
+              />
+              <Route
+                path="/super-admin/organizations"
+                element={<Organizations />}
+              />
+
+              {/* Uncomment as you build these pages:
+              <Route path="/super-admin/overview"             element={<SuperAdminOverview />} />
+              <Route path="/super-admin/organizations/:id"    element={<OrganizationDetail />} />
+              <Route path="/super-admin/organizations/new"    element={<AddOrganization />} />
+              <Route path="/super-admin/plans"                element={<PlansAndBilling />} />
+              <Route path="/super-admin/users"                element={<AllUsers />} />
+              <Route path="/super-admin/analytics"            element={<SuperAdminAnalytics />} />
+              <Route path="/super-admin/audit-logs"           element={<AuditLogs />} />
+              <Route path="/super-admin/settings"             element={<PlatformSettings />} />
+              <Route path="/super-admin/notifications"        element={<SuperAdminNotifications />} />
+              <Route path="/super-admin/profile"              element={<SuperAdminProfile />} />
+              */}
+            </Route>
+
+            {/* ── Admin — requires auth + admin type ── */}
+            <Route
+              element={<ProtectedRoute requireAuth allowedTypes={["admin"]} />}
+            >
               <Route path="/admin/help" element={<AdminHelp />} />
 
-              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="/admin/dashboard"                     element={<AnalyticsDashboard />} />
-              <Route path="/admin/profile"                       element={<ProfileSettings />} />
-              <Route path="/admin/users"                         element={<UserManagement />} />
-              <Route path="/admin/requested-dishes"              element={<RequestedDishesByUsers />} />
-              <Route path="/admin/add-user"                      element={<AddUser />} />
-              <Route path="/admin/vendors"                       element={<VendorManagement />} />
-              <Route path="/admin/add-vendor"                    element={<AddVendor />} />
-              <Route path="/admin/vendors-performance"           element={<VendorPerformance />} />
-              <Route path="/admin/menu-overview"                 element={<MenuOverview />} />
-              <Route path="/admin/menu-management"               element={<MenuManagement />} />
-              <Route path="/admin/menu-management/:id"           element={<MenuManagement />} />
-              <Route path="/admin/attendance"                    element={<AttendanceSummary />} />
-              <Route path="/admin/reports"                       element={<FoodWastageReport />} />
-              <Route path="/admin/food-wastage-report"           element={<FoodWastageReport />} />
-              <Route path="/admin/consumption-analytics-report"  element={<ConsumptionAnalytics />} />
-              <Route path="/admin/notifications"                 element={<AdminNotifications />} />
+              <Route
+                path="/admin"
+                element={<Navigate to="/admin/dashboard" replace />}
+              />
+              <Route path="/admin/dashboard" element={<AnalyticsDashboard />} />
+              <Route path="/admin/profile" element={<ProfileSettings />} />
+              <Route path="/admin/users" element={<UserManagement />} />
+              <Route
+                path="/admin/requested-dishes"
+                element={<RequestedDishesByUsers />}
+              />
+              <Route path="/admin/add-user" element={<AddUser />} />
+              <Route path="/admin/vendors" element={<VendorManagement />} />
+              <Route path="/admin/add-vendor" element={<AddVendor />} />
+              <Route
+                path="/admin/vendors-performance"
+                element={<VendorPerformance />}
+              />
+              <Route path="/admin/menu-overview" element={<MenuOverview />} />
+              <Route
+                path="/admin/menu-management"
+                element={<MenuManagement />}
+              />
+              <Route
+                path="/admin/menu-management/:id"
+                element={<MenuManagement />}
+              />
+              <Route path="/admin/attendance" element={<AttendanceSummary />} />
+              <Route path="/admin/reports" element={<FoodWastageReport />} />
+              <Route
+                path="/admin/food-wastage-report"
+                element={<FoodWastageReport />}
+              />
+              <Route
+                path="/admin/consumption-analytics-report"
+                element={<ConsumptionAnalytics />}
+              />
+              <Route
+                path="/admin/notifications"
+                element={<AdminNotifications />}
+              />
             </Route>
 
             {/* Admin settings — admin only */}
@@ -138,39 +202,79 @@ function App() {
               <Route path="/admin/settings" element={<Settings />} />
             </Route>
 
-            {/* User — requires auth + user type */}
-            <Route element={<ProtectedRoute requireAuth allowedTypes={["user"]} />}>
-              <Route path="/user" element={<Navigate to="/user/today-menu" replace />} />
-              <Route path="/user/today-menu"                      element={<TodayMenuPanel />} />
-              <Route path="/user/weekly-menu-panel"               element={<WeeklyMenuPanel />} />
-              <Route path="/user/dish-details-panel/:scheduleId"  element={<DishDetailsPanel />} />
-              <Route path="/user/dish-request"                    element={<RequestDishPanel />} />
-              <Route path="/user/reviews"                         element={<MyReviewsPanel />} />
-              <Route path="/user/rate-my-meal"                    element={<RateMealPanel />} />
-              <Route path="/user/delivery-status"                 element={<DeliveryStatus />} />
-              <Route path="/user/my-consumption-report"           element={<MyConsumptionReport />} />
-              <Route path="/user/profile"                         element={<Profile />} />
-              <Route path="/user/notification"                    element={<Notifications />} />
+            {/* ── User — requires auth + user type ── */}
+            <Route
+              element={<ProtectedRoute requireAuth allowedTypes={["user"]} />}
+            >
+              <Route
+                path="/user"
+                element={<Navigate to="/user/today-menu" replace />}
+              />
+              <Route path="/user/today-menu" element={<TodayMenuPanel />} />
+              <Route
+                path="/user/weekly-menu-panel"
+                element={<WeeklyMenuPanel />}
+              />
+              <Route
+                path="/user/dish-details-panel/:scheduleId"
+                element={<DishDetailsPanel />}
+              />
+              <Route path="/user/dish-request" element={<RequestDishPanel />} />
+              <Route path="/user/reviews" element={<MyReviewsPanel />} />
+              <Route path="/user/rate-my-meal" element={<RateMealPanel />} />
+              <Route
+                path="/user/delivery-status"
+                element={<DeliveryStatus />}
+              />
+              <Route
+                path="/user/my-consumption-report"
+                element={<MyConsumptionReport />}
+              />
+              <Route path="/user/profile" element={<Profile />} />
+              <Route path="/user/notification" element={<Notifications />} />
             </Route>
 
-            {/* Vendor — requires auth + vendor type */}
-            <Route element={<ProtectedRoute requireAuth allowedTypes={["vendor"]} />}>
-              <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
-              <Route path="/vendor/dashboard"        element={<VendorDashboard />} />
-              <Route path="/vendor/menu"             element={<TodayMenu />} />
-              <Route path="/vendor/menu/edit"        element={<EditDish />} />
-              <Route path="/vendor/menu/weekly"      element={<WeeklyMenu />} />
-              <Route path="/vendor/menu/weekly/edit" element={<EditDish />} />  {/* ← ADDED */}
-              <Route path="/vendor/requested-dishes" element={<RequestedDishes />} />
-              <Route path="/vendor/delivery"         element={<DeliveryStatusVendor />} />
-              <Route path="/vendor/reviews"          element={<VendorReviews />} />
-              <Route path="/vendor/reviews/:id"      element={<ReviewDetail />} />
-              <Route path="/vendor/reports"          element={<VendorReport />} />
-              <Route path="/vendor/settings"         element={<VendorSettings />} />
+            {/* ── Vendor — requires auth + vendor type ── */}
+            <Route
+              element={<ProtectedRoute requireAuth allowedTypes={["vendor"]} />}
+            >
+              <Route
+                path="/vendor"
+                element={<Navigate to="/vendor/dashboard" replace />}
+              />
+              <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+              <Route path="/vendor/menu" element={<TodayMenu />} />
+              <Route path="/vendor/menu/edit" element={<EditDish />} />
+              <Route path="/vendor/menu/weekly" element={<WeeklyMenu />} />
+              <Route path="/vendor/menu/weekly/edit" element={<EditDish />} />
+              <Route
+                path="/vendor/requested-dishes"
+                element={<RequestedDishes />}
+              />
+              <Route
+                path="/vendor/delivery"
+                element={<DeliveryStatusVendor />}
+              />
+              <Route path="/vendor/reviews" element={<VendorReviews />} />
+              <Route path="/vendor/reviews/:id" element={<ReviewDetail />} />
+              <Route path="/vendor/reports" element={<VendorReport />} />
+
+              <Route
+                path="/vendor/organizations"
+                element={<OrganizationManagement />}
+              />
+              <Route
+                path="/vendor/organizations/add"
+                element={<AddOrganization />}
+              />
+              <Route path="/vendor/settings" element={<VendorSettings />} />
             </Route>
           </Routes>
 
-          {!isAdminRoute && !isUserRoute && !isVendorRoute && <Footer />}
+          {!isSuperAdminRoute &&
+            !isAdminRoute &&
+            !isUserRoute &&
+            !isVendorRoute && <Footer />}
         </main>
       </div>
     </div>
