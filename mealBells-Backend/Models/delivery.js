@@ -1,3 +1,4 @@
+// Models/delivery.js
 import mongoose from "mongoose";
 
 const deliverySchema = new mongoose.Schema(
@@ -6,11 +7,17 @@ const deliverySchema = new mongoose.Schema(
       type:     mongoose.Schema.Types.ObjectId,
       ref:      "MenuSchedule",
       required: true,
-      unique:   true,
+      unique:   true,   // still fine — scheduleId is now already per-org
     },
     vendorId: {
       type:     mongoose.Schema.Types.ObjectId,
       ref:      "User",
+      required: true,
+    },
+    // ✅ Added — makes every delivery query org-scopable without joining schedules
+    organizationId: {
+      type:     mongoose.Schema.Types.ObjectId,
+      ref:      "organizations",
       required: true,
     },
     status: {

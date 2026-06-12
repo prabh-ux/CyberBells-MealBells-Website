@@ -38,11 +38,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const VendorReport = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { analyticsData, analyticsLoading, analyticsError } = useSelector((s: RootState) => s.vendors);
-  const [period, setPeriod] = useState<AnalyticsPeriod>("week");
+const { analyticsData, analyticsLoading, analyticsError, activeOrgId } = useSelector((s: RootState) => s.vendors);
+const [period, setPeriod] = useState<AnalyticsPeriod>("week");
 
-  useEffect(() => { dispatch(fetchVendorAnalytics(period)); }, [dispatch, period]);
-
+useEffect(() => {
+  if (activeOrgId) dispatch(fetchVendorAnalytics({ period, orgId: activeOrgId }));
+}, [dispatch, period, activeOrgId]);
   if (analyticsLoading)
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -55,7 +56,9 @@ const VendorReport = () => {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
           <p className="text-gray-500 font-medium mb-3">{analyticsError}</p>
-          <button onClick={() => dispatch(fetchVendorAnalytics(period))} className="text-sm text-orange-500 underline">Retry</button>
+          <button onClick={() => {
+  if (activeOrgId) dispatch(fetchVendorAnalytics({ period, orgId: activeOrgId ?? undefined }));
+}} className="text-sm text-orange-500 underline">Retry</button>
         </div>
       </div>
     );

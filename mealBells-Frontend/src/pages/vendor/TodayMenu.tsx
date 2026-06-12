@@ -36,9 +36,11 @@ const formatDate = (iso: string) => {
 export default function TodayMenu() {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { todayMenu, menuLoading, error } = useSelector((s: RootState) => s.vendors);
+  const { todayMenu, menuLoading, error, activeOrgId } = useSelector((s: RootState) => s.vendors);
 
-  useEffect(() => { dispatch(fetchVendorTodayMenu()); }, [dispatch]);
+useEffect(() => {
+  if (activeOrgId) dispatch(fetchVendorTodayMenu(activeOrgId));
+}, [dispatch, activeOrgId]);
 
   const PageShell = ({ children }: { children: React.ReactNode }) => (
     <div className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto space-y-4 sm:space-y-6">

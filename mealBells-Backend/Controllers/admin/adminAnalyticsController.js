@@ -6,10 +6,6 @@ import { ActivityLog }       from "../../Models/activityLog.js";
 import { dishModel as Dish } from "../../Models/dish.js";
 import { MenuSchedule }      from "../../Models/menuSchedule.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-
 const dayWindow = (offset = 0) => {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);
@@ -28,16 +24,14 @@ const rangeWindow = (days = 7) => ({
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const DAY_MAP   = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
-// ── NEW: get admin's organizationId ──────────────────────────────────────────
 const getAdminOrgId = async (adminUserId) => {
   const admin = await userModel.findById(adminUserId).select("organizationId").lean();
-  return admin?.organizationId ?? null;
+  return admin?.organizationId?.[0] ?? null;
 };
 
-// ── NEW: get all user IDs in an org ──────────────────────────────────────────
 const getOrgUserIds = async (organizationId, extraFilter = {}) => {
   const users = await userModel.find(
-    { type: "user", active: true, organizationId, ...extraFilter },
+    { type: "user", active: true, organizationId: { $in: [organizationId] }, ...extraFilter },
     "_id"
   ).lean();
   return users.map(u => u._id);
@@ -51,10 +45,8 @@ const buildFilters = async ({ days, department, vendorId, mealType, adminUserId 
     date:     { $gte: start, $lte: end },
   };
 
-  // ── Scope to admin's org users ───────────────────────────────────────────
   const organizationId = await getAdminOrgId(adminUserId);
   if (!organizationId) {
-    // admin has no org — return empty results by using impossible match
     baseMatch.userId = { $in: [] };
     return { baseMatch, mealTypeLookup: [] };
   }
@@ -66,14 +58,12 @@ const buildFilters = async ({ days, department, vendorId, mealType, adminUserId 
   const orgUserIds = await getOrgUserIds(organizationId, deptFilter);
   baseMatch.userId = { $in: orgUserIds };
 
-  // ── vendor → restrict scheduleIds ───────────────────────────────────────
   if (vendorId && vendorId !== "all" && mongoose.Types.ObjectId.isValid(vendorId)) {
     const dishes    = await Dish.find({ vendor: new mongoose.Types.ObjectId(vendorId) }, "_id").lean();
     const schedules = await MenuSchedule.find({ dish: { $in: dishes.map(d => d._id) } }, "_id").lean();
     baseMatch.scheduleId = { $in: schedules.map(s => s._id) };
   }
 
-  // ── mealType → pipeline join stages ─────────────────────────────────────
   let mealTypeLookup = [];
   if (mealType && mealType !== "all") {
     const allowed = mealType === "Veg"
@@ -99,10 +89,10 @@ const buildFilters = async ({ days, department, vendorId, mealType, adminUserId 
 // ─────────────────────────────────────────────────────────────────────────────
 export const getAnalyticsSummary = async (req, res) => {
   try {
-    const days       = Math.min(parseInt(req.query.days) || 7, 30);
-    const department = req.query.department || "all";
-    const vendorId   = req.query.vendorId   || "all";
-    const mealType   = req.query.mealType   || "all";
+    const days        = Math.min(parseInt(req.query.days) || 7, 30);
+    const department  = req.query.department || "all";
+    const vendorId    = req.query.vendorId   || "all";
+    const mealType    = req.query.mealType   || "all";
     const adminUserId = req.user.id;
 
     const organizationId = await getAdminOrgId(adminUserId);
@@ -122,16 +112,15 @@ export const getAnalyticsSummary = async (req, res) => {
     const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
     const lastMonthEnd   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59, 999));
 
-    // ── All counts scoped to org ─────────────────────────────────────────────
     const [totalUsers, usersThisMonth, usersLastMonth, totalActiveUsers, totalVendors] =
       await Promise.all([
-        userModel.countDocuments({ type: "user", organizationId, ...deptFilter }),
-        userModel.countDocuments({ type: "user", organizationId, ...deptFilter, createdAt: { $gte: thisMonthStart } }),
-        userModel.countDocuments({ type: "user", organizationId, ...deptFilter, createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } }),
-        userModel.countDocuments({ type: "user", active: true, organizationId, ...deptFilter }),
+        userModel.countDocuments({ type: "user", organizationId: { $in: [organizationId] }, ...deptFilter }),
+        userModel.countDocuments({ type: "user", organizationId: { $in: [organizationId] }, ...deptFilter, createdAt: { $gte: thisMonthStart } }),
+        userModel.countDocuments({ type: "user", organizationId: { $in: [organizationId] }, ...deptFilter, createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } }),
+        userModel.countDocuments({ type: "user", active: true, organizationId: { $in: [organizationId] }, ...deptFilter }),
         vendorId !== "all"
           ? Promise.resolve(1)
-          : userModel.countDocuments({ type: "vendor", status: true }),
+          : userModel.countDocuments({ type: "vendor", status: true, organizationId: { $in: [organizationId] } }),
       ]);
 
     const { baseMatch, mealTypeLookup } = await buildFilters({ days, department, vendorId, mealType, adminUserId });
@@ -143,8 +132,8 @@ export const getAnalyticsSummary = async (req, res) => {
       { $group: { _id: "$_id.date", count: { $sum: 1 } } },
     ]);
 
-    const mealsInRange  = perDay.reduce((s, d) => s + d.count, 0);
-    let attendancePct   = 0;
+    const mealsInRange = perDay.reduce((s, d) => s + d.count, 0);
+    let attendancePct  = 0;
     if (totalActiveUsers > 0 && perDay.length > 0) {
       const avg     = mealsInRange / perDay.length;
       attendancePct = Math.min(100, +((avg / totalActiveUsers) * 100).toFixed(1));
@@ -218,7 +207,7 @@ export const getAttendanceChart = async (req, res) => {
 
     const [{ baseMatch, mealTypeLookup }, totalActiveUsers] = await Promise.all([
       buildFilters({ days, department, vendorId, mealType, adminUserId }),
-      userModel.countDocuments({ type: "user", active: true, organizationId, ...deptFilter }),
+      userModel.countDocuments({ type: "user", active: true, organizationId: { $in: [organizationId] }, ...deptFilter }),
     ]);
 
     const raw = await Attendance.aggregate([
@@ -263,16 +252,14 @@ export const getAttendanceChart = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getRecentActivity = async (req, res) => {
   try {
-    const limit        = Math.min(parseInt(req.query.limit) || 20, 100);
-    const adminUserId  = req.user.id;
+    const limit          = Math.min(parseInt(req.query.limit) || 20, 100);
+    const adminUserId    = req.user.id;
     const organizationId = await getAdminOrgId(adminUserId);
 
-    // Get all user IDs in org to scope activity log
     const orgUserIds = organizationId
       ? await getOrgUserIds(organizationId)
       : [];
 
-    // Also include the admin themselves
     const scopedUserIds = [...orgUserIds, adminUserId];
 
     const logs = await ActivityLog.find({
@@ -305,7 +292,17 @@ export const getRecentActivity = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const getFilterOptions = async (req, res) => {
   try {
-    const vendors = await userModel.find({ type: "vendor", status: true }, "name _id").lean();
+    const organizationId = await getAdminOrgId(req.user.id);
+    if (!organizationId)
+      return res.status(200).json({ success: true, vendors: [] });
+
+    const vendors = await userModel
+      .find(
+        { type: "vendor", status: true, organizationId: { $in: [organizationId] } },
+        "name _id"
+      )
+      .lean();
+
     return res.status(200).json({
       success: true,
       vendors: vendors.map(v => ({ label: v.name, value: String(v._id) })),
@@ -328,7 +325,6 @@ export const getConsumptionBreakdown = async (req, res) => {
 
     const { baseMatch, mealTypeLookup } = await buildFilters({ days, department, vendorId, mealType, adminUserId });
 
-    // ── Meal type breakdown ──────────────────────────────────────────────────
     const mealTypeAgg = await Attendance.aggregate([
       { $match: baseMatch },
       ...mealTypeLookup,
@@ -353,7 +349,6 @@ export const getConsumptionBreakdown = async (req, res) => {
       both:   Math.round((bothCount   / rawTotal) * 100),
     };
 
-    // ── Top dish ─────────────────────────────────────────────────────────────
     const topDishAgg = await Attendance.aggregate([
       { $match: { ...baseMatch, scheduleId: { $ne: null } } },
       ...mealTypeLookup,
@@ -371,7 +366,6 @@ export const getConsumptionBreakdown = async (req, res) => {
       ? { name: topDishAgg[0].name, count: topDishAgg[0].count, popularity: Math.min(100, Math.round((topDishAgg[0].count / rawTotal) * 100)) }
       : { name: "N/A", count: 0, popularity: 0 };
 
-    // ── Most active department ────────────────────────────────────────────────
     const deptAgg = await Attendance.aggregate([
       { $match: baseMatch },
       ...mealTypeLookup,
@@ -386,7 +380,6 @@ export const getConsumptionBreakdown = async (req, res) => {
       ? { name: deptAgg[0]._id, count: deptAgg[0].count }
       : { name: "N/A", count: 0 };
 
-    // ── Least active day ──────────────────────────────────────────────────────
     const dayAgg = await Attendance.aggregate([
       { $match: baseMatch },
       ...mealTypeLookup,
@@ -398,7 +391,6 @@ export const getConsumptionBreakdown = async (req, res) => {
       ? { name: DAY_NAMES[dayAgg[0]._id - 1], dayOfWeek: dayAgg[0]._id, count: dayAgg[0].count }
       : { name: "N/A", dayOfWeek: null, count: 0 };
 
-    // ── Heatmap ───────────────────────────────────────────────────────────────
     const DOW_TO_IDX = { 2: 0, 3: 1, 4: 2, 5: 3, 6: 4, 7: 5, 1: 6 };
 
     const topDeptsAgg = await Attendance.aggregate([
@@ -456,7 +448,6 @@ export const getLiveFeed = async (req, res) => {
 
     const organizationId = await getAdminOrgId(adminUserId);
 
-    // ── Base filter scoped to org ────────────────────────────────────────────
     const baseFilter = { response: "yes" };
 
     if (organizationId) {
@@ -479,8 +470,8 @@ export const getLiveFeed = async (req, res) => {
       .populate({ path: "userId", select: "name department avatar" })
       .lean();
 
-    const schedIds    = [...new Set(records.map(r => String(r.scheduleId)).filter(Boolean))];
-    const schedules   = await MenuSchedule.find({ _id: { $in: schedIds } })
+    const schedIds  = [...new Set(records.map(r => String(r.scheduleId)).filter(Boolean))];
+    const schedules = await MenuSchedule.find({ _id: { $in: schedIds } })
       .populate({ path: "dish", select: "name dishType" })
       .lean();
     const scheduleMap = Object.fromEntries(schedules.map(s => [String(s._id), s]));

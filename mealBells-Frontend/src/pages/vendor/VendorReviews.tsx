@@ -29,13 +29,16 @@ const TYPE_OPTIONS   = ["All", "Veg", "Non-Veg"];
 const VendorReviews = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { reviewsData, reviewsLoading, reviewsError } = useSelector((s: RootState) => s.vendors);
+  const { reviewsData, reviewsLoading, reviewsError, activeOrgId } = useSelector((s: RootState) => s.vendors);
 
   const [ratingFilter, setRatingFilter] = useState("All");
   const [dateFilter,   setDateFilter]   = useState("All");
   const [typeFilter,   setTypeFilter]   = useState("All");
 
-  useEffect(() => { dispatch(fetchVendorReviews({ page: 1, limit: 50 })); }, [dispatch]);
+  // ✅ refetch whenever the active org changes, and scope the request to it
+  useEffect(() => {
+    if (activeOrgId) dispatch(fetchVendorReviews({ page: 1, limit: 50, orgId: activeOrgId }));
+  }, [dispatch, activeOrgId]);
 
   const filteredReviews = useMemo(() => {
     let list = reviewsData?.reviews ?? [];
@@ -63,7 +66,12 @@ const VendorReviews = () => {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
           <p className="text-gray-500 font-medium mb-3">{reviewsError}</p>
-          <button onClick={() => dispatch(fetchVendorReviews({ page: 1, limit: 50 }))} className="text-sm text-orange-500 underline">Retry</button>
+          <button
+            onClick={() => activeOrgId && dispatch(fetchVendorReviews({ page: 1, limit: 50, orgId: activeOrgId }))}
+            className="text-sm text-orange-500 underline"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

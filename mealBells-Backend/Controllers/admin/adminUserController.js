@@ -7,7 +7,7 @@ import { logActivity } from "../../utils/logActivity.js";
 // ── Shared: get admin's organizationId ───────────────────────────────────────
 const getAdminOrgId = async (adminUserId) => {
   const admin = await userModel.findById(adminUserId).select("organizationId").lean();
-  return admin?.organizationId ?? null;
+  return admin?.organizationId?.[0] ?? null; 
 };
 
 // ── Add User ──────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ export const getUsers = async (req, res) => {
     const organizationId = await getAdminOrgId(req.user.id);
 
     const filter = { type: "user" };
-    if (organizationId) filter.organizationId = organizationId;
+if (organizationId) filter.organizationId = { $in: [organizationId] };
 
     const users = await userModel
       .find(filter)

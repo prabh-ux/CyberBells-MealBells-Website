@@ -18,11 +18,11 @@ function Skeleton({ className }: { className?: string }) {
 export default function VendorDashboard() {
   const navigate  = useNavigate();
   const dispatch  = useDispatch<AppDispatch>();
-  const { dashboard, dashboardLoading, error } = useSelector((s: RootState) => s.vendors);
+ const { dashboard, dashboardLoading, error, activeOrgId } = useSelector((s: RootState) => s.vendors);
 
-  useEffect(() => {
-    dispatch(fetchVendorDashboard());
-  }, [dispatch]);
+useEffect(() => {
+  if (activeOrgId) dispatch(fetchVendorDashboard({ orgId: activeOrgId }));
+}, [dispatch, activeOrgId]); 
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8">

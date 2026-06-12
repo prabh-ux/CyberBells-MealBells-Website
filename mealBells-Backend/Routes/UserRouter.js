@@ -26,7 +26,9 @@ router.post ("/dish-request",             ensureJwtValidation, submitDishRequest
 
 router.get  ("/consumption-stats",        ensureJwtValidation, getConsumptionStats);
 
-router.get  ("/delivery/today",           getUserTodayDelivery);
+// ✅ FIX: was missing ensureJwtValidation, req.user was undefined
+router.get  ("/delivery/today",           ensureJwtValidation, getUserTodayDelivery);
+
 router.get("/organization", ensureJwtValidation, getMyOrganization);
 
 export default router;

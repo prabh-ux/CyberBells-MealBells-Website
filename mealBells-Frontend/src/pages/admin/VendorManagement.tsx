@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../app/store";
 import {
@@ -7,7 +6,6 @@ import {
   optimisticToggleVendor, revertToggleVendor,
 } from "../../slices/adminSlice";
 import toast from "react-hot-toast";
-import { Plus } from "lucide-react";
 
 import type { EditVendorForm, Vendor } from "../../types/admin";
 import VendorFilters    from "../../components/admin/VendorManagement/VendorFilters";
@@ -20,7 +18,6 @@ const PAGE_SIZE = 8;
 
 export default function VendorManagement() {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
 
 const { vendors, vendorsLoading, vendorError, vendorUpdating } = useSelector((s: RootState) => s.admin);
   const [search,       setSearch]       = useState("");
@@ -145,13 +142,13 @@ const { vendors, vendorsLoading, vendorError, vendorUpdating } = useSelector((s:
             Manage your restaurant partners, their capacities, and operational status.
           </p>
         </div>
-        <button
+        {/* <button
           onClick={() => navigate("/admin/add-vendor")}
           className="w-full sm:w-auto bg-[#FF7A00] hover:bg-orange-600 transition-all text-white rounded-xl px-6 py-3 text-sm font-bold shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 active:scale-95"
         >
           <Plus size={18} />
           Add Vendor
-        </button>
+        </button> */}
       </div>
 
       <VendorFilters

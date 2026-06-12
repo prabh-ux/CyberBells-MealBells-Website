@@ -21,14 +21,17 @@ const DISH_POPULATE = {
   },
 };
 
-// ── GET /user/menu-today ──────────────────────────────────────────────────────
+// GET /user/menu-today
 export const getTodayMenu = async (req, res) => {
   try {
     const { start, end } = getDayRange();
     const { id: userId, organizationId } = req.user;
 
     const schedule = await MenuSchedule
-      .findOne({ scheduledDate: { $gte: start, $lte: end } })
+      .findOne({
+        organizationId,
+        scheduledDate: { $gte: start, $lte: end }
+      })
       .populate(DISH_POPULATE)
       .lean();
 
@@ -36,7 +39,6 @@ export const getTodayMenu = async (req, res) => {
       return res.status(404).json({ success: false, msg: "No menu scheduled for today" });
     }
 
-    // run all independent queries in parallel
     const [yesAttendances, myAttendance, delivery] = await Promise.all([
       Attendance.find({
         organizationId,
@@ -81,10 +83,10 @@ export const getTodayMenu = async (req, res) => {
   }
 };
 
-// ── GET /user/menu-weekly ─────────────────────────────────────────────────────
+// GET /user/menu-weekly
 export const getWeeklyMenu = async (req, res) => {
   try {
-    const { id: userId } = req.user;
+    const { id: userId, organizationId } = req.user;
     const offset = parseInt(req.query.offset ?? "0", 10);
 
     const now  = new Date();
@@ -101,7 +103,10 @@ export const getWeeklyMenu = async (req, res) => {
 
     const [schedules, attendances] = await Promise.all([
       MenuSchedule
-        .find({ scheduledDate: { $gte: monday, $lte: friday } })
+        .find({
+          organizationId,
+          scheduledDate: { $gte: monday, $lte: friday }
+        })
         .populate(DISH_POPULATE)
         .sort({ scheduledDate: 1 })
         .lean(),
@@ -132,14 +137,15 @@ export const getWeeklyMenu = async (req, res) => {
   }
 };
 
+
 // ── GET /user/dish/:scheduleId ────────────────────────────────────────────────
 export const getDishDetails = async (req, res) => {
   try {
     const { scheduleId } = req.params;
-    const { id: userId } = req.user;
+    const { id: userId, organizationId } = req.user;
 
     const schedule = await MenuSchedule
-      .findById(scheduleId)
+      .findOne({ _id: scheduleId, organizationId })
       .populate({
         path:     "dish",
         populate: { path: "vendor", select: "name logo rating foodType" },

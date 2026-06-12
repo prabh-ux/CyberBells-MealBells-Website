@@ -36,6 +36,7 @@ export const addVendor = async (req, res) => {
       rating:         0,
       totalReviews:   0,
       password:       hashed,
+      organizationId: admin?.organizationId ?? [],
     });
 
     await logActivity({

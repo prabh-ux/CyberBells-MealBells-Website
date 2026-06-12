@@ -17,13 +17,11 @@ export default function WeeklyMenu() {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { weeklyMenu, menuLoading, error } = useSelector(
-    (s: RootState) => s.vendors
-  );
+  const { weeklyMenu, menuLoading, error, activeOrgId } = useSelector((s: RootState) => s.vendors);
 
-  useEffect(() => {
-    dispatch(fetchVendorWeeklyMenu());
-  }, [dispatch]);
+useEffect(() => {
+  if (activeOrgId) dispatch(fetchVendorWeeklyMenu(activeOrgId));
+}, [dispatch, activeOrgId]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (menuLoading) {

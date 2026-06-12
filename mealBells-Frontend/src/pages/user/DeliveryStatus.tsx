@@ -65,10 +65,22 @@ export default function DeliveryStatus() {
   const { userDelivery, loadingUserDelivery, userDeliveryError } = useSelector((s: RootState) => s.delivery);
   const org = useSelector((s: RootState) => s.organization.data);
 
+  // Initial fetch
   useEffect(() => {
     dispatch(fetchUserDelivery());
     dispatch(fetchUserOrganization());
   }, [dispatch]);
+
+  // Poll every 30s until delivery is completed
+  useEffect(() => {
+    if (userDelivery?.isCompleted) return;
+
+    const interval = setInterval(() => {
+      dispatch(fetchUserDelivery());
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [dispatch, userDelivery?.isCompleted]);
 
   const doneCount  = userDelivery?.steps.filter((s) => s.status === "done").length ?? 0;
   const totalSteps = (userDelivery?.steps.length ?? 1) - 1;
@@ -79,7 +91,7 @@ export default function DeliveryStatus() {
   const displayEta     = hasLiveEta ? userDelivery!.estimatedArrival : org?.mealTime ? formatTime(org.mealTime) : "—";
   const etaIsScheduled = !hasLiveEta && Boolean(org?.mealTime);
 
-  if (loadingUserDelivery)
+  if (loadingUserDelivery && !userDelivery)
     return (
       <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
@@ -102,7 +114,6 @@ export default function DeliveryStatus() {
     <div className="min-h-screen bg-[#F7F6F3]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12">
 
-        {/* Header */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
             Delivery Status
@@ -111,7 +122,7 @@ export default function DeliveryStatus() {
             onClick={() => dispatch(fetchUserDelivery())}
             className="flex items-center gap-1.5 sm:gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loadingUserDelivery ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
@@ -119,10 +130,8 @@ export default function DeliveryStatus() {
         {userDelivery && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
 
-            {/* LEFT */}
             <div className="space-y-4 sm:space-y-5">
 
-              {/* ETA card */}
               <div className="bg-white rounded-[20px] sm:rounded-[24px] p-6 sm:p-8 border border-gray-100 shadow-sm text-center">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4 sm:mb-5">
                   <Bike className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
@@ -147,7 +156,6 @@ export default function DeliveryStatus() {
                 </span>
               </div>
 
-              {/* Dish info */}
               {userDelivery.dish?.name && (
                 <div className="bg-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-5 border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -168,7 +176,6 @@ export default function DeliveryStatus() {
                 </div>
               )}
 
-              {/* Progress bar */}
               <div className="bg-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-5 border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between mb-2 sm:mb-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Progress</p>
@@ -185,7 +192,6 @@ export default function DeliveryStatus() {
               </div>
             </div>
 
-            {/* RIGHT: Timeline */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 border border-gray-100 shadow-sm">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6 sm:mb-8">

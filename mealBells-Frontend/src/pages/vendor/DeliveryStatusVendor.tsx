@@ -5,12 +5,7 @@ import { fetchTodayDelivery, advanceDelivery } from "../../slices/deliverySlice"
 import type { DeliveryStep } from "../../slices/deliverySlice";
 import { Check, Clock, RefreshCw, Loader2, AlertTriangle, Timer } from "lucide-react";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Delivery-timing helpers
-// e.g. "10:00 AM - 01:00 PM"  →  { start: Date, end: Date }
-// ─────────────────────────────────────────────────────────────────────────────
 function parseTimeString(timeStr: string): Date | null {
-  // matches "10:00 AM", "1:00 PM", "01:00 PM" etc.
   const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (!match) return null;
 
@@ -26,31 +21,22 @@ function parseTimeString(timeStr: string): Date | null {
   return d;
 }
 
-/**
- * Parse "HH:MM AM - HH:MM PM" into { start, end } Date objects for today.
- * Returns null if the string is missing or malformed.
- */
 function parseDeliveryWindow(timing: string | undefined | null): {
   start: Date; end: Date; label: string;
 } | null {
   if (!timing) return null;
-
   const parts = timing.split("-").map(s => s.trim());
   if (parts.length < 2) return null;
-
   const start = parseTimeString(parts[0]);
   const end   = parseTimeString(parts[1]);
   if (!start || !end) return null;
-
   return { start, end, label: timing };
 }
 
-
-/** Human-readable countdown or elapsed string. */
 function useWindowStatus(window: { start: Date; end: Date } | null) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 10_000); // refresh every 10 s
+    const id = setInterval(() => setNow(new Date()), 10_000);
     return () => clearInterval(id);
   }, []);
 
@@ -75,28 +61,25 @@ function useWindowStatus(window: { start: Date; end: Date } | null) {
   return { closed, notStarted, countdown };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Step component
-// ─────────────────────────────────────────────────────────────────────────────
 const StepItem: React.FC<{ step: DeliveryStep; isLast: boolean }> = ({ step, isLast }) => (
   <div className="flex items-start gap-4 relative">
-    {/* connector line */}
     {!isLast && (
       <div className="absolute left-[15px] top-8 bottom-0 w-0.5 bg-gray-100" />
     )}
-    {/* circle */}
     <div className={[
       "relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all",
-      step.status === "completed" ? "bg-orange-500"                             : "",
-      step.status === "current"   ? "bg-orange-500 ring-4 ring-orange-100"      : "",
-      step.status === "pending"   ? "bg-white border-2 border-gray-200"         : "",
+      step.status === "completed" ? "bg-orange-500"                        : "",
+      step.status === "current"   ? "bg-orange-500 ring-4 ring-orange-100" : "",
+      step.status === "pending"   ? "bg-white border-2 border-gray-200"    : "",
     ].join(" ")}>
       {step.status === "completed" && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
       {step.status === "current"   && <Clock className="w-4 h-4 text-white" strokeWidth={2} />}
     </div>
-    {/* text */}
     <div className="pt-1 pb-6">
-      <p className={`text-sm font-semibold ${step.status === "current" ? "text-orange-500" : step.status === "completed" ? "text-gray-700" : "text-gray-400"}`}>
+      <p className={`text-sm font-semibold ${
+        step.status === "current"   ? "text-orange-500" :
+        step.status === "completed" ? "text-gray-700"   : "text-gray-400"
+      }`}>
         {step.label}
       </p>
       {step.subtitle && (
@@ -106,23 +89,20 @@ const StepItem: React.FC<{ step: DeliveryStep; isLast: boolean }> = ({ step, isL
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main component
-// ─────────────────────────────────────────────────────────────────────────────
 const DeliveryStatusVendor: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   const { delivery, loading, saving, error } = useSelector((s: RootState) => s.delivery);
-  const { user } = useSelector((s: RootState) => s.auth);
+  const { user }        = useSelector((s: RootState) => s.auth);
+  const { activeOrgId } = useSelector((s: RootState) => s.vendors);
 
-  // Parse the vendor's delivery timing window from their profile
-  // e.g. "10:00 AM - 01:00 PM"
   const window = parseDeliveryWindow((user as any)?.deliveryTiming);
   const { closed, notStarted, countdown } = useWindowStatus(window);
 
-  useEffect(() => { dispatch(fetchTodayDelivery()); }, [dispatch]);
+  useEffect(() => {
+    if (activeOrgId) dispatch(fetchTodayDelivery(activeOrgId));
+  }, [dispatch, activeOrgId]);
 
-  // ── Loading ──
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center">
@@ -131,7 +111,6 @@ const DeliveryStatusVendor: React.FC = () => {
     );
   }
 
-  // ── Error ──
   if (error) {
     return (
       <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center p-4">
@@ -142,7 +121,7 @@ const DeliveryStatusVendor: React.FC = () => {
           <p className="text-sm font-semibold text-gray-700 mb-1">Could not load delivery</p>
           <p className="text-xs text-gray-400 mb-4">{error}</p>
           <button
-            onClick={() => dispatch(fetchTodayDelivery())}
+            onClick={() => activeOrgId && dispatch(fetchTodayDelivery(activeOrgId))}
             className="text-sm font-bold text-orange-500 hover:text-orange-600 transition-colors"
           >
             Try Again
@@ -152,15 +131,11 @@ const DeliveryStatusVendor: React.FC = () => {
     );
   }
 
-  // Whether the button should be disabled due to timing
-  const timingBlocked = closed || notStarted;
-
-  // Determine button state label
   const getWindowBadge = () => {
     if (!window) return null;
-    if (closed)      return { color: "bg-red-100 text-red-600",    text: "Window Closed"   };
-    if (notStarted)  return { color: "bg-blue-100 text-blue-600",  text: "Not Started Yet" };
-    return               { color: "bg-green-100 text-green-600", text: "Window Open"     };
+    if (closed)     return { color: "bg-red-100 text-red-600",    text: "Window Closed"   };
+    if (notStarted) return { color: "bg-blue-100 text-blue-600",  text: "Not Started Yet" };
+    return                  { color: "bg-green-100 text-green-600", text: "Window Open"   };
   };
   const badge = getWindowBadge();
 
@@ -168,7 +143,6 @@ const DeliveryStatusVendor: React.FC = () => {
     <div className="min-h-screen bg-[#F7F6F3] p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* ── Page title ── */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Delivery Status</h1>
           <p className="text-sm text-gray-400 mt-1">Manage today's delivery progress</p>
@@ -176,16 +150,13 @@ const DeliveryStatusVendor: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-          {/* ── LEFT: Timing info card ── */}
+          {/* LEFT: Timing info */}
           <div className="space-y-4">
-
-            {/* Delivery window card */}
             <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-4">Delivery Window</p>
 
               {window ? (
                 <div className="space-y-4">
-                  {/* Time range */}
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
                       <Clock className="w-5 h-5 text-orange-400" />
@@ -196,7 +167,6 @@ const DeliveryStatusVendor: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Status badge */}
                   {badge && (
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${badge.color}`}>
                       <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -204,7 +174,6 @@ const DeliveryStatusVendor: React.FC = () => {
                     </span>
                   )}
 
-                  {/* Countdown */}
                   {countdown && (
                     <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-2xl">
                       <Timer className="w-4 h-4 text-gray-400 shrink-0" />
@@ -212,12 +181,12 @@ const DeliveryStatusVendor: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Blocked warning */}
+                  {/* Window closed — informational only, does NOT block the button */}
                   {closed && (
-                    <div className="flex gap-2.5 p-3 bg-red-50 rounded-2xl border border-red-100">
-                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                      <p className="text-xs text-red-700 leading-relaxed font-medium">
-                        The delivery window has passed. Status updates are no longer allowed for today.
+                    <div className="flex gap-2.5 p-3 bg-orange-50 rounded-2xl border border-orange-100">
+                      <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-orange-700 leading-relaxed font-medium">
+                        The delivery window has passed. You can still update the delivery status.
                       </p>
                     </div>
                   )}
@@ -226,9 +195,8 @@ const DeliveryStatusVendor: React.FC = () => {
                     <div className="flex gap-2.5 p-3 bg-blue-50 rounded-2xl border border-blue-100">
                       <Clock className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                       <p className="text-xs text-blue-700 leading-relaxed font-medium">
-                        Delivery window hasn't started yet. Updates will be enabled at {
-                          window.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-                        }.
+                        Delivery window hasn't started yet. Updates will be enabled at{" "}
+                        {window.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}.
                       </p>
                     </div>
                   )}
@@ -243,7 +211,6 @@ const DeliveryStatusVendor: React.FC = () => {
               )}
             </div>
 
-            {/* Current status summary */}
             {delivery && (
               <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-3">Current Status</p>
@@ -257,7 +224,6 @@ const DeliveryStatusVendor: React.FC = () => {
                 <p className="text-xs text-gray-400 mt-3">
                   {delivery.steps.filter(s => s.status === "completed").length} of {delivery.steps.length} steps completed
                 </p>
-                {/* progress bar */}
                 <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-orange-500 rounded-full transition-all duration-500"
@@ -270,11 +236,10 @@ const DeliveryStatusVendor: React.FC = () => {
             )}
           </div>
 
-          {/* ── RIGHT: Steps + button ── */}
+          {/* RIGHT: Steps + button */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
 
-              {/* Header */}
               <div className="px-6 py-5 border-b border-gray-50 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Live Progress</p>
@@ -289,7 +254,6 @@ const DeliveryStatusVendor: React.FC = () => {
                 )}
               </div>
 
-              {/* Steps */}
               {delivery ? (
                 <div className="px-6 pt-6 pb-2">
                   {delivery.steps.map((step, idx) => (
@@ -306,43 +270,26 @@ const DeliveryStatusVendor: React.FC = () => {
                 </div>
               )}
 
-              {/* Action button */}
+              {/* Action button — only blocked when already completed, never by time window */}
               <div className="px-6 pb-6">
                 {delivery?.isCompleted ? (
                   <div className="w-full py-3.5 bg-green-50 border border-green-200 text-green-600 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm">
                     <Check className="w-4 h-4" strokeWidth={3} /> Delivery Complete
                   </div>
-
-                ) : delivery?.canAdvance && !timingBlocked ? (
+                ) : delivery?.canAdvance ? (
                   <button
-                    onClick={() => dispatch(advanceDelivery(delivery._id))}
+                    onClick={() => activeOrgId && dispatch(advanceDelivery({ deliveryId: delivery._id, orgId: activeOrgId }))}
                     disabled={saving}
                     className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-orange-200/60 flex items-center justify-center gap-2 text-sm"
                   >
                     {saving
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</>
-                      : <><RefreshCw className="w-4 h-4" /> Update Status</>}
+                      : <><RefreshCw className="w-4 h-4" /> Update Status</>
+                    }
                   </button>
-
-                ) : delivery?.canAdvance && timingBlocked ? (
-                  /* Window closed / not started — button disabled with reason */
-                  <div className="space-y-2">
-                    <button
-                      disabled
-                      className="w-full py-3.5 bg-gray-100 text-gray-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm cursor-not-allowed"
-                    >
-                      <RefreshCw className="w-4 h-4" /> Update Status
-                    </button>
-                    <p className="text-xs text-center font-semibold text-gray-400 flex items-center justify-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-                      {closed
-                        ? "Updates blocked — delivery window has ended"
-                        : `Updates open at ${window?.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`}
-                    </p>
-                  </div>
-
                 ) : null}
               </div>
+
             </div>
           </div>
         </div>

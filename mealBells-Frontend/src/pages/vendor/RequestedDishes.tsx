@@ -36,18 +36,18 @@ interface CardProps {
 
 const RequestCard: React.FC<CardProps> = ({ item, responding, onRespond }) => {
   const { label: dietLabel, cls: dietCls } = DIET_MAP[item.dietaryPreference] ?? DIET_MAP["Both"];
-  const SpiceIcon   = SPICE_ICON[item.spiceLevel] ?? Flame;
+  const SpiceIcon    = SPICE_ICON[item.spiceLevel] ?? Flame;
   const isResponding = responding === item._id;
-  const name        = item.user?.name ?? "Unknown";
+  const name         = item.user?.name ?? "Unknown";
 
   return (
     <div className="flex flex-col gap-3">
       {/* User row */}
       <div className="flex items-center gap-3">
         <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${avatarColor(name)} flex items-center justify-center text-white text-sm font-semibold overflow-hidden shrink-0`}>
-          {item.user?.avatar ? (
-            <img src={item.user.avatar} alt={name} className="w-full h-full object-cover" />
-          ) : initials(name)}
+          {item.user?.avatar
+            ? <img src={item.user.avatar} alt={name} className="w-full h-full object-cover" />
+            : initials(name)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
@@ -94,11 +94,10 @@ const RequestCard: React.FC<CardProps> = ({ item, responding, onRespond }) => {
               disabled={isResponding}
               className="flex-[3] py-3 sm:py-3.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              {isResponding ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <><CheckCircle2 size={14} strokeWidth={2.5} /> Accept</>
-              )}
+              {isResponding
+                ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <><CheckCircle2 size={14} strokeWidth={2.5} /> Accept</>
+              }
             </button>
             <button
               onClick={() => onRespond(item._id, "ignored")}
@@ -116,14 +115,22 @@ const RequestCard: React.FC<CardProps> = ({ item, responding, onRespond }) => {
 
 const RequestedDishes: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+
   const { vendorRequests, vendorLoading, vendorError, responding } = useSelector(
-    (state: RootState) => state.dishRequests
+    (s: RootState) => s.dishRequests
   );
+  // ── read active org from vendorSlice ──────────────────────────────────────
+  const { activeOrgId } = useSelector((s: RootState) => s.vendors);
+
   const [statusFilter, setStatusFilter] = useState<"pending" | "accepted" | "ignored" | "all">("pending");
 
+  // re-fetch whenever status filter OR active org changes
   useEffect(() => {
-    dispatch(fetchVendorDishRequests({ status: statusFilter }));
-  }, [dispatch, statusFilter]);
+    dispatch(fetchVendorDishRequests({
+      status: statusFilter,
+      orgId:  activeOrgId ?? undefined,
+    }));
+  }, [dispatch, statusFilter, activeOrgId]);
 
   const handleRespond = (id: string, action: "accepted" | "ignored") => {
     dispatch(respondToVendorDishRequest({ id, action }));
@@ -156,7 +163,7 @@ const RequestedDishes: React.FC = () => {
               </button>
             ))}
             <button
-              onClick={() => dispatch(fetchVendorDishRequests({ status: statusFilter }))}
+              onClick={() => dispatch(fetchVendorDishRequests({ status: statusFilter, orgId: activeOrgId ?? undefined }))}
               className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <RefreshCw size={14} className={vendorLoading ? "animate-spin" : ""} />

@@ -69,11 +69,14 @@ const initialState: DeliveryState = {
 
 // ── Thunks ────────────────────────────────────────────────────────────────────
 
-export const fetchTodayDelivery = createAsyncThunk<DeliveryData, void, { rejectValue: string }>(
+// ✅ FIX: accept orgId so the request is scoped to the vendor's active org
+export const fetchTodayDelivery = createAsyncThunk<DeliveryData, string | undefined, { rejectValue: string }>(
   "delivery/fetchToday",
-  async (_, { rejectWithValue }) => {
+  async (orgId, { rejectWithValue }) => {
     try {
-      const { data } = await axiosInstance.get("/vendor/delivery/today");
+      const { data } = await axiosInstance.get("/vendor/delivery/today", {
+        params: orgId ? { orgId } : {},
+      });
       return data.data as DeliveryData;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.msg ?? "Failed to load delivery.");
@@ -81,18 +84,29 @@ export const fetchTodayDelivery = createAsyncThunk<DeliveryData, void, { rejectV
   }
 );
 
-export const advanceDelivery = createAsyncThunk<DeliveryData, string, { rejectValue: string }>(
+// ✅ FIX: accept orgId so advance is scoped to the same org as the displayed delivery
+export const advanceDelivery = createAsyncThunk<
+  DeliveryData,
+  { deliveryId: string; orgId?: string },
+  { rejectValue: string }
+>(
   "delivery/advance",
-  async (deliveryId, { rejectWithValue }) => {
+  async ({ deliveryId, orgId }, { rejectWithValue }) => {
     try {
-      const { data } = await axiosInstance.put(`/vendor/delivery/${deliveryId}/advance`);
+      const { data } = await axiosInstance.put(
+        `/vendor/delivery/${deliveryId}/advance`,
+        {},
+        { params: orgId ? { orgId } : {} }
+      );
+
       return data.data as DeliveryData;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.msg ?? "Failed to update status.");
+      return rejectWithValue(
+        err.response?.data?.msg ?? "Failed to update status."
+      );
     }
   }
 );
-
 export const fetchUserDelivery = createAsyncThunk<UserDeliveryData, void, { rejectValue: string }>(
   "delivery/fetchUserToday",
   async (_, { rejectWithValue }) => {

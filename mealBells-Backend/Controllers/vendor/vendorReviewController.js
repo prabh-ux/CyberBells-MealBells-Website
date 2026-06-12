@@ -1,8 +1,21 @@
 import mongoose from "mongoose";
 import { dishModel } from "../../Models/dish.js";
 import { Review }    from "../../Models/review.js";
+import { userModel } from "../../Models/user.js";
 
-// ── GET /vendor/reviews?page=1&limit=10 ──────────────────────────────────────
+// ── Helper: resolve & validate orgId for this vendor ─────────────────────────
+const resolveOrgId = async (vendorUserId, orgIdParam) => {
+  const vendor = await userModel.findById(vendorUserId).select("organizationId").lean();
+  const vendorOrgIds = vendor?.organizationId ?? [];
+  if (!vendorOrgIds.length) return null;
+  if (orgIdParam) {
+    const match = vendorOrgIds.find(id => id.toString() === orgIdParam);
+    return match ?? null;
+  }
+  return vendorOrgIds[0];
+};
+
+// ── GET /vendor/reviews?page=1&limit=10&orgId=<id> ───────────────────────────
 export const getVendorReviews = async (req, res) => {
   try {
     const vendorId = new mongoose.Types.ObjectId(req.user.id);
@@ -11,19 +24,30 @@ export const getVendorReviews = async (req, res) => {
     const limit = Math.min(50, parseInt(req.query.limit ?? "10", 10));
     const skip  = (page - 1) * limit;
 
+    // ✅ scope to the vendor's active org
+    const organizationId = await resolveOrgId(req.user.id, req.query.orgId);
+    if (!organizationId) {
+      return res.status(400).json({ success: false, msg: "Valid orgId is required" });
+    }
+
     const vendorDishIds = await dishModel.find({ vendor: vendorId }).distinct("_id");
 
+    const match = {
+      dishId: { $in: vendorDishIds },
+      organizationId,                        // ✅ org-scoped
+    };
+
     const [reviews, total, stats] = await Promise.all([
-      Review.find({ dishId: { $in: vendorDishIds } })
+      Review.find(match)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate({ path: "userId", select: "name avatar" })
         .populate({ path: "dishId", select: "name image dishType" })
         .lean(),
-      Review.countDocuments({ dishId: { $in: vendorDishIds } }),
+      Review.countDocuments(match),
       Review.aggregate([
-        { $match: { dishId: { $in: vendorDishIds } } },
+        { $match: match },
         {
           $group: {
             _id:          null,

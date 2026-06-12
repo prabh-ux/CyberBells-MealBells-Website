@@ -10,7 +10,7 @@ const dishSchema = new mongoose.Schema(
     },
     dishType: {
       type:    String,
-      enum:    ["Veg", "Non-Veg","Both"],
+      enum:    ["Veg", "Non-Veg", "Both"],
       default: "Veg",
     },
     description: {
@@ -32,13 +32,23 @@ const dishSchema = new mongoose.Schema(
       ref:     "users",
       default: null,
     },
+
+    // ✅ NEW — required for org scoping; add this field and backfill existing docs
+    organizationId: {
+      type:  mongoose.Schema.Types.ObjectId,
+      ref:   "organizations",
+      index: true,          // index for query perf
+      // Not `required: true` yet — lets you backfill existing dishes safely.
+      // Once backfilled, change to required: true.
+      default: null,
+    },
+
     availability: {
       type:    String,
       enum:    ["Full Time", "Breakfast", "Lunch", "Dinner"],
       default: "Full Time",
     },
 
-    // ── stat card fields ──────────────────────────────────────────────────────
     qualityScore: {
       type:    String,
       trim:    true,
@@ -54,18 +64,16 @@ const dishSchema = new mongoose.Schema(
       trim:    true,
       default: "20 mins",
     },
-
     protein: {
-      type:    String,   
+      type:    String,
       trim:    true,
       default: "",
     },
     carbs: {
-      type:    String,  
+      type:    String,
       trim:    true,
       default: "",
     },
-
     tags: {
       type:    [String],
       default: [],

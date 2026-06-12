@@ -1,7 +1,9 @@
+// Controllers/vendor/vendorMenuController.js
 import mongoose from "mongoose";
 import { dishModel }    from "../../Models/dish.js";
 import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { Attendance }   from "../../Models/attendance.js";
+import { userModel }    from "../../Models/user.js";
 
 const getUTCMidnight = (offsetDays = 0) => {
   const d = new Date();
@@ -27,21 +29,51 @@ const applyDishUpdates = async (dishId, body, file) => {
   const updates = {};
   fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
   if (file?.path) updates.image = file.path;
-
   return dishModel.findByIdAndUpdate(dishId, { $set: updates }, { new: true }).lean();
 };
 
-// ── GET /vendor/menu/today ────────────────────────────────────────────────────
+// ── Helper: get vendor's org IDs ──────────────────────────────────────────────
+// A vendor can serve multiple orgs. Returns all org IDs the vendor belongs to.
+const getVendorOrgIds = async (vendorUserId) => {
+  const vendor = await userModel.findById(vendorUserId).select("organizationId").lean();
+  return vendor?.organizationId ?? [];
+};
+
+// ── Helper: resolve & validate orgId from query ───────────────────────────────
+// Ensures the requested org actually belongs to this vendor.
+const resolveOrgId = async (vendorUserId, orgIdParam) => {
+  const vendorOrgIds = await getVendorOrgIds(vendorUserId);
+  if (!vendorOrgIds.length) return null;
+
+  if (orgIdParam) {
+    // validate vendor actually serves this org
+    const match = vendorOrgIds.find(id => id.toString() === orgIdParam);
+    return match ?? null;
+  }
+
+  // default: first org (backwards compat for single-org vendors)
+  return vendorOrgIds[0];
+};
+
+// ── GET /vendor/menu/today?orgId=<id> ─────────────────────────────────────────
 export const getVendorTodayMenu = async (req, res) => {
   try {
     const vendorId = new mongoose.Types.ObjectId(req.user.id);
     const today    = getUTCMidnight();
 
+    // ✅ FIX: resolve which org context this request is for
+    const organizationId = await resolveOrgId(req.user.id, req.query.orgId);
+    if (!organizationId) {
+      return res.status(404).json({ success: false, msg: "No organization found for this vendor" });
+    }
+
     const vendorDishIds = await dishModel.find({ vendor: vendorId }).distinct("_id");
 
+    // ✅ FIX: scope schedule lookup to specific org — no cross-org leakage
     const schedule = await MenuSchedule
       .findOne({
         dish:          { $in: vendorDishIds },
+        organizationId,                        // ✅ org-scoped
         scheduledDate: today,
       })
       .populate("dish", "name image dishType estimatedCalories ingredients description tags protein carbs prepTime")
@@ -63,6 +95,7 @@ export const getVendorTodayMenu = async (req, res) => {
         scheduledDate:    schedule.scheduledDate,
         expectedPortions: portions,
         dish:             schedule.dish,
+        organizationId,                        // ✅ return so frontend knows which org
       },
     });
   } catch (err) {
@@ -71,17 +104,25 @@ export const getVendorTodayMenu = async (req, res) => {
   }
 };
 
-// ── GET /vendor/menu/weekly ───────────────────────────────────────────────────
+// ── GET /vendor/menu/weekly?orgId=<id> ────────────────────────────────────────
 export const getVendorWeeklyMenu = async (req, res) => {
   try {
     const vendorId                           = new mongoose.Types.ObjectId(req.user.id);
     const { start: weekStart, end: weekEnd } = getWeekRange();
 
+    // ✅ FIX: resolve org context
+    const organizationId = await resolveOrgId(req.user.id, req.query.orgId);
+    if (!organizationId) {
+      return res.status(404).json({ success: false, msg: "No organization found for this vendor" });
+    }
+
     const vendorDishIds = await dishModel.find({ vendor: vendorId }).distinct("_id");
 
+    // ✅ FIX: filter schedules by org so vendor only sees this org's weekly menu
     const schedules = await MenuSchedule
       .find({
         dish:          { $in: vendorDishIds },
+        organizationId,                        // ✅ org-scoped
         scheduledDate: { $gte: weekStart, $lte: weekEnd },
       })
       .populate("dish", "name image dishType estimatedCalories tags description")
@@ -113,16 +154,24 @@ export const getVendorWeeklyMenu = async (req, res) => {
   }
 };
 
-// ── PUT /vendor/menu/today ────────────────────────────────────────────────────
+// ── PUT /vendor/menu/today?orgId=<id> ─────────────────────────────────────────
 export const updateVendorTodayDish = async (req, res) => {
   try {
     const vendorId = new mongoose.Types.ObjectId(req.user.id);
     const today    = getUTCMidnight();
 
+    // ✅ FIX: resolve org context
+    const organizationId = await resolveOrgId(req.user.id, req.query.orgId);
+    if (!organizationId) {
+      return res.status(404).json({ success: false, msg: "No organization found for this vendor" });
+    }
+
     const vendorDishIds = await dishModel.find({ vendor: vendorId }).distinct("_id");
 
+    // ✅ FIX: org-scoped schedule lookup
     const schedule = await MenuSchedule.findOne({
       dish:          { $in: vendorDishIds },
+      organizationId,                          // ✅ org-scoped
       scheduledDate: today,
     }).lean();
 
@@ -139,6 +188,8 @@ export const updateVendorTodayDish = async (req, res) => {
 };
 
 // ── GET /vendor/menu/schedule/:scheduleId ─────────────────────────────────────
+// No org filter needed here — scheduleId is already specific enough,
+// but we still verify the dish belongs to this vendor.
 export const getVendorScheduleById = async (req, res) => {
   try {
     const vendorId      = new mongoose.Types.ObjectId(req.user.id);
@@ -199,12 +250,14 @@ export const updateVendorScheduleDish = async (req, res) => {
 };
 
 // ── POST /vendor/menu/schedule ────────────────────────────────────────────────
+// Body: { dishId, date, orgId }
+// orgId is required when vendor serves multiple orgs
 export const createVendorSchedule = async (req, res) => {
   try {
     const vendorId      = new mongoose.Types.ObjectId(req.user.id);
     const vendorDishIds = await dishModel.find({ vendor: vendorId }).distinct("_id");
 
-    const { dishId, date } = req.body;
+    const { dishId, date, orgId } = req.body;
     if (!dishId || !date) {
       return res.status(400).json({ success: false, msg: "dishId and date are required" });
     }
@@ -214,20 +267,30 @@ export const createVendorSchedule = async (req, res) => {
       return res.status(403).json({ success: false, msg: "Dish does not belong to this vendor" });
     }
 
+    // ✅ FIX: resolve org from body (vendor picks which org they're scheduling for)
+    const organizationId = await resolveOrgId(req.user.id, orgId);
+    if (!organizationId) {
+      return res.status(400).json({ success: false, msg: "Valid orgId is required" });
+    }
+
     const dayStart = new Date(date); dayStart.setUTCHours(0, 0, 0, 0);
     const dayEnd   = new Date(date); dayEnd.setUTCHours(23, 59, 59, 999);
 
+    // ✅ FIX: conflict check is scoped to this org only
     const conflict = await MenuSchedule.findOne({
+      organizationId,                          // ✅ per-org conflict check
       scheduledDate: { $gte: dayStart, $lte: dayEnd },
     });
     if (conflict) {
-      return res.status(409).json({ success: false, msg: "A dish is already scheduled on this date" });
+      return res.status(409).json({ success: false, msg: "A dish is already scheduled on this date for this organization" });
     }
 
+    // ✅ FIX: save organizationId on the schedule
     const schedule = await MenuSchedule.create({
       dish:          dishId,
       scheduledDate: dayStart,
       scheduledBy:   req.user.id,
+      organizationId,                          // ✅ org-scoped
     });
 
     const populated = await MenuSchedule

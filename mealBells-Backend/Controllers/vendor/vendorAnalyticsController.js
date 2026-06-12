@@ -3,6 +3,19 @@ import { dishModel }    from "../../Models/dish.js";
 import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { Attendance }   from "../../Models/attendance.js";
 import { Review }       from "../../Models/review.js";
+import { userModel }    from "../../Models/user.js";
+
+// ── Helper: resolve & validate orgId for this vendor ─────────────────────────
+const resolveOrgId = async (vendorUserId, orgIdParam) => {
+  const vendor = await userModel.findById(vendorUserId).select("organizationId").lean();
+  const vendorOrgIds = vendor?.organizationId ?? [];
+  if (!vendorOrgIds.length) return null;
+  if (orgIdParam) {
+    const match = vendorOrgIds.find(id => id.toString() === orgIdParam);
+    return match ?? null;
+  }
+  return vendorOrgIds[0];
+};
 
 const getUTCMidnight = (offsetDays = 0) => {
   const d = new Date();
@@ -79,13 +92,19 @@ const analyticsEmptyPayload = (buckets) => ({
   leastPopular:   null,
 });
 
-// ── GET /vendor/analytics?period=week|month|year ──────────────────────────────
+// ── GET /vendor/analytics?period=week|month|year&orgId=<id> ──────────────────
 export const getVendorAnalytics = async (req, res) => {
   try {
     const vendorId = new mongoose.Types.ObjectId(req.user.id);
     const period   = ["week", "month", "year"].includes(req.query.period)
       ? req.query.period
       : "week";
+
+    // ✅ scope to the vendor's active org
+    const organizationId = await resolveOrgId(req.user.id, req.query.orgId);
+    if (!organizationId) {
+      return res.status(400).json({ success: false, msg: "Valid orgId is required" });
+    }
 
     const { start, end, buckets } = getPeriodRange(period);
 
@@ -99,9 +118,11 @@ export const getVendorAnalytics = async (req, res) => {
       return res.status(200).json({ success: true, data: analyticsEmptyPayload(buckets) });
     }
 
+    // ✅ org-scoped schedules
     const schedules = await MenuSchedule.find({
-      dish:          { $in: vendorDishIds },
-      scheduledDate: { $gte: start, $lte: end },
+      dish:           { $in: vendorDishIds },
+      organizationId,
+      scheduledDate:  { $gte: start, $lte: end },
     })
       .select("_id scheduledDate dish")
       .lean();
@@ -150,11 +171,13 @@ export const getVendorAnalytics = async (req, res) => {
     const activeDays    = boxesDelivered.filter((b) => b.boxes > 0).length || 1;
     const avgDailyMeals = Math.round(totalBoxes / activeDays);
 
+    // ✅ org-scoped review stats
     const reviewStats = await Review.aggregate([
       {
         $match: {
-          dishId:    { $in: vendorDishIds },
-          createdAt: { $gte: start, $lte: end },
+          dishId:         { $in: vendorDishIds },
+          organizationId,
+          createdAt:      { $gte: start, $lte: end },
         },
       },
       {

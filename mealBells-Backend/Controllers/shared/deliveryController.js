@@ -1,7 +1,9 @@
+// Controllers/shared/deliveryController.js
 import mongoose from "mongoose";
 import { dishModel }    from "../../Models/dish.js";
 import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { Delivery }     from "../../Models/delivery.js";
+import { userModel }    from "../../Models/user.js";
 
 const STEPS = [
   "preparing",
@@ -26,10 +28,8 @@ const getUTCMidnight = () => {
 };
 
 const getDayRange = (date = new Date()) => {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
+  const start = new Date(date); start.setHours(0,  0,  0,   0);
+  const end   = new Date(date); end.setHours(23, 59, 59, 999);
   return { start, end };
 };
 
@@ -40,33 +40,28 @@ const fmtTime = (date) =>
       })
     : null;
 
-// Builds steps for the vendor view (completed / current / pending + subtitle)
 const buildVendorSteps = (delivery) => {
   const currentIdx = STEPS.indexOf(delivery.status);
   return STEPS.map((key, idx) => {
     const status =
-      idx < currentIdx  ? "completed"
+      idx < currentIdx     ? "completed"
       : idx === currentIdx ? "current"
       : "pending";
-
     const subtitle =
       status === "completed" && delivery.stepTimes[key]
         ? `Completed at ${fmtTime(delivery.stepTimes[key])}`
         : "";
-
     return { key, label: STEP_LABELS[key].label, status, subtitle };
   });
 };
 
-// Builds steps for the user view (done / active / pending + time + icon)
 const buildUserSteps = (delivery) => {
   const currentIdx = STEPS.indexOf(delivery.status);
   return STEPS.map((key, idx) => {
     const status =
-      idx < currentIdx  ? "done"
+      idx < currentIdx     ? "done"
       : idx === currentIdx ? "active"
       : "pending";
-
     return {
       id:    key,
       label: STEP_LABELS[key].label,
@@ -79,33 +74,64 @@ const buildUserSteps = (delivery) => {
   });
 };
 
-const findTodayScheduleForVendor = async (vendorId) => {
+const getUserOrgId = async (userId) => {
+  const user = await userModel.findById(userId).select("organizationId").lean();
+  const ids  = user?.organizationId ?? [];
+  return ids.length > 0 ? ids[0] : null;
+};
+
+const getVendorOrgIds = async (vendorUserId) => {
+  const vendor = await userModel.findById(vendorUserId).select("organizationId").lean();
+  return vendor?.organizationId ?? [];
+};
+
+const resolveVendorOrgId = async (vendorUserId, orgIdParam) => {
+  const vendorOrgIds = await getVendorOrgIds(vendorUserId);
+  if (!vendorOrgIds.length) return null;
+  if (orgIdParam) {
+    const match = vendorOrgIds.find(id => id.toString() === orgIdParam);
+    return match ?? null;
+  }
+  return vendorOrgIds[0];
+};
+
+const findTodayScheduleForVendor = async (vendorId, organizationId) => {
   const vendorDishIds = await dishModel.find({ vendor: vendorId }).distinct("_id");
   return MenuSchedule.findOne({
     dish:          { $in: vendorDishIds },
+    organizationId,
     scheduledDate: getUTCMidnight(),
   }).lean();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VENDOR: GET today's delivery
-// GET /vendor/delivery/today
-// ─────────────────────────────────────────────────────────────────────────────
+// ── VENDOR: GET today's delivery?orgId=<id> ───────────────────────────────────
 export const getTodayDelivery = async (req, res) => {
   try {
     const vendorId = new mongoose.Types.ObjectId(req.user.id);
-    const schedule = await findTodayScheduleForVendor(vendorId);
-    if (!schedule)
-      return res.status(404).json({ success: false, msg: "No dish scheduled for today" });
 
-    // auto-create delivery if it doesn't exist yet
-    let delivery = await Delivery.findOne({ scheduleId: schedule._id, vendorId });
+    const organizationId = await resolveVendorOrgId(req.user.id, req.query.orgId);
+    if (!organizationId) {
+      return res.status(400).json({ success: false, msg: "Valid orgId is required" });
+    }
+
+    const schedule = await findTodayScheduleForVendor(vendorId, organizationId);
+    if (!schedule) {
+      return res.status(404).json({ success: false, msg: "No dish scheduled for today" });
+    }
+
+    let delivery = await Delivery.findOne({
+      scheduleId:    schedule._id,
+      vendorId,
+      organizationId,
+    });
+
     if (!delivery) {
       delivery = await Delivery.create({
-        scheduleId: schedule._id,
+        scheduleId:    schedule._id,
         vendorId,
-        status:    "preparing",
-        stepTimes: { preparing: new Date() },
+        organizationId,
+        status:        "preparing",
+        stepTimes:     { preparing: new Date() },
       });
     }
 
@@ -125,20 +151,28 @@ export const getTodayDelivery = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VENDOR: Advance delivery status
-// PUT /vendor/delivery/:deliveryId/advance
-// ─────────────────────────────────────────────────────────────────────────────
+// ── VENDOR: Advance delivery status ──────────────────────────────────────────
+// ✅ FIX: scope to organizationId too (passed via ?orgId=), in addition to vendorId,
+// so advancing always operates on the delivery for the org currently shown in UI.
 export const advanceDeliveryStatus = async (req, res) => {
   try {
     const vendorId = new mongoose.Types.ObjectId(req.user.id);
-    const delivery = await Delivery.findOne({ _id: req.params.deliveryId, vendorId });
-    if (!delivery)
+    const { orgId } = req.query;
+
+    const match = { _id: req.params.deliveryId, vendorId };
+    if (orgId) {
+      match.organizationId = new mongoose.Types.ObjectId(orgId);
+    }
+
+    const delivery = await Delivery.findOne(match);
+    if (!delivery) {
       return res.status(404).json({ success: false, msg: "Delivery not found" });
+    }
 
     const currentIdx = STEPS.indexOf(delivery.status);
-    if (currentIdx === STEPS.length - 1)
+    if (currentIdx === STEPS.length - 1) {
       return res.status(400).json({ success: false, msg: "Already completed" });
+    }
 
     const next = STEPS[currentIdx + 1];
     delivery.status          = next;
@@ -162,16 +196,21 @@ export const advanceDeliveryStatus = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// USER: GET today's delivery status
-// GET /user/delivery/today
-// ─────────────────────────────────────────────────────────────────────────────
+// ── USER: GET today's delivery status ─────────────────────────────────────────
 export const getUserTodayDelivery = async (req, res) => {
   try {
     const { start, end } = getDayRange();
 
+    const organizationId = await getUserOrgId(req.user.id);
+    if (!organizationId) {
+      return res.status(400).json({ success: false, msg: "User has no associated organization" });
+    }
+
     const schedule = await MenuSchedule
-      .findOne({ scheduledDate: { $gte: start, $lte: end } })
+      .findOne({
+        organizationId,
+        scheduledDate: { $gte: start, $lte: end },
+      })
       .populate({ path: "dish", select: "name image" })
       .lean();
 
@@ -179,13 +218,14 @@ export const getUserTodayDelivery = async (req, res) => {
       return res.status(404).json({ success: false, msg: "No menu scheduled for today" });
     }
 
-    const delivery = await Delivery.findOne({ scheduleId: schedule._id }).lean();
+    const delivery = await Delivery.findOne({
+      scheduleId:    schedule._id,
+      organizationId,
+    }).lean();
 
     if (!delivery) {
       return res.status(404).json({ success: false, msg: "Delivery not started yet" });
     }
-
-    const currentIdx = STEPS.indexOf(delivery.status);
 
     return res.status(200).json({
       success: true,

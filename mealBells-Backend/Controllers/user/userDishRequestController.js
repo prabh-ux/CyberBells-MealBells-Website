@@ -1,3 +1,4 @@
+// Controllers/user/userDishRequestController.js
 import { DishRequest } from "../../Models/dishrequest.js";
 
 const getDayRange = (date = new Date()) => {
@@ -11,7 +12,7 @@ const getDayRange = (date = new Date()) => {
 // ── POST /user/dish-request ───────────────────────────────────────────────────
 export const submitDishRequest = async (req, res) => {
   try {
-    const { id: userId, organizationId } = req.user;
+    const { id: userId, organizationId: userOrgIds } = req.user;
     const {
       requestedDate,
       dishSuggestion    = "",
@@ -28,6 +29,12 @@ export const submitDishRequest = async (req, res) => {
       return res.status(400).json({ success: false, msg: "Invalid requestedDate" });
     }
 
+    // ✅ user belongs to a single org
+    const organizationId = Array.isArray(userOrgIds) ? userOrgIds[0] : userOrgIds;
+    if (!organizationId) {
+      return res.status(400).json({ success: false, msg: "User has no associated organization" });
+    }
+
     const { start, end } = getDayRange(date);
 
     const request = await DishRequest.findOneAndUpdate(
@@ -35,7 +42,7 @@ export const submitDishRequest = async (req, res) => {
       {
         $set: {
           userId,
-          organizationId: organizationId ?? null,
+          organizationId,
           requestedDate:  date,
           dishSuggestion,
           dietaryPreference,

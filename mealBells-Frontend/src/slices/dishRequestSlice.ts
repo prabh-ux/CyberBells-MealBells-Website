@@ -3,7 +3,6 @@ import axiosInstance from "../app/axiosInstance";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-// vendorId comes back as a populated object from the server after .populate()
 export interface PopulatedVendor {
   _id:   string;
   name:  string;
@@ -12,7 +11,7 @@ export interface PopulatedVendor {
 }
 
 export interface ForwardedVendor {
-  vendorId:     PopulatedVendor;   // always populated — never a raw string
+  vendorId:     PopulatedVendor;
   vendorStatus: "pending" | "accepted" | "ignored";
   respondedAt:  string | null;
 }
@@ -93,7 +92,7 @@ export const forwardDishRequest = createAsyncThunk(
 export const fetchVendorDishRequests = createAsyncThunk(
   "dishRequests/fetchVendor",
   async (
-    params: { status?: "pending" | "accepted" | "ignored" | "all" } = {},
+    params: { status?: "pending" | "accepted" | "ignored" | "all"; orgId?: string } = {},
     { rejectWithValue }
   ) => {
     try {
