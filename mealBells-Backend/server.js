@@ -7,6 +7,7 @@ import AdminRouter from './Routes/AdminRouter.js';
 import OrganizationRoutes from './Routes/OrganizationRoutes.js';
 import UserRoutes from './Routes/UserRouter.js';
 import VendorRoutes from './Routes/VendorRouter.js';
+import SuperAdminRoutes from './Routes/superAdminRoutes.js';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(cookieParser());
 
 app.use("/auth",         AuthRouter);
 app.use("/admin",        AdminRouter);
+app.use("/super-admin",  SuperAdminRoutes);
 app.use("/organization", OrganizationRoutes);
 app.use("/user",         UserRoutes);
 app.use("/vendor",       VendorRoutes);

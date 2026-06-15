@@ -57,6 +57,13 @@ import AdminHelp from "./pages/admin/Adminhelp";
 import Organizations from "./pages/organization/Orgnaizations";
 import OrganizationManagement from "./pages/vendor/OrganizationManagementVendor";
 import AddOrganization from "./pages/vendor/AddOrganizationVendor";
+import SuperAdminAnalyticsDashboard from "./pages/superAdmin/SuperAdminAnalyticsDashboard";
+import SuperAdminUsersPage from "./pages/superAdmin/SuperAdminUsersPage";
+import SuperAdminDishRequests from "./pages/superAdmin/Superadmindishrequests";
+import SuperAdminVendors from "./pages/superAdmin/SuperAdminVendors";
+import SuperAdminAddVendor from "./pages/superAdmin/SuperAdminAddVendor";
+import SuperAdminAddUser from "./pages/superAdmin/SuperAdminAddUser";
+import SuperAdminVendorPerformance from "./pages/superAdmin/SuperAdminVendorPerformance";
 
 function App() {
   const location = useLocation();
@@ -129,10 +136,22 @@ function App() {
                 path="/super-admin"
                 element={<Navigate to="/super-admin/organizations" replace />}
               />
+             <Route
+                path="/super-admin/dashboard"
+                element={<SuperAdminAnalyticsDashboard />}
+              />
+              <Route path="/super-admin/vendors" element={<SuperAdminVendors />} />
+<Route path="/super-admin/vendors/add" element={<SuperAdminAddVendor />} />
+
+
               <Route
                 path="/super-admin/organizations"
                 element={<Organizations />}
               />
+              <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
+              <Route path="/super-admin/requested-dishes" element={<SuperAdminDishRequests />} />
+<Route path="/super-admin/users/add" element={<SuperAdminAddUser />} />
+<Route path="super-admin/vendors-performance" element={<SuperAdminVendorPerformance />} />
 
               {/* Uncomment as you build these pages:
               <Route path="/super-admin/overview"             element={<SuperAdminOverview />} />

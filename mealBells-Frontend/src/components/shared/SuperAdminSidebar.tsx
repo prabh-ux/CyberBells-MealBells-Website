@@ -12,17 +12,23 @@ import reportsIcon from "../../assets/reportsIcon.png";
 import settingsIcon from "../../assets/settingsIcon.png";
 import logoutIcon from "../../assets/logoutIcon.png";
 import menuOverviewIcon from "../../assets/menuOverviewIcon.png";
+import attendanceIcon from "../../assets/attendanceIcon.png";
+
 import NavButton from "./NavButton";
 
 // ── Nav config ───────────────────────────────────────────────────────────────
 
 const navItems = [
-  { label: "Overview",        path: "/super-admin/overview",      icon: dashboardIcon },
+  { label: "Dashboard",            path: "/super-admin/dashboard",                    icon: dashboardIcon },
+  { label: "Users",                path: "/super-admin/users",                        icon: usersIcon },
+  { label: "Requested Dishes",     path: "/super-admin/requested-dishes",             icon: usersIcon },
+  { label: "Vendors",              path: "/super-admin/vendors",                      icon: vendorsIcon },
+  { label: "Vendors Performance",  path: "/super-admin/vendors-performance",          icon: vendorsIcon },
+  { label: "Attendance",           path: "/super-admin/attendance",                   icon: attendanceIcon },
+  { label: "Consumption Report",   path: "/super-admin/consumption-analytics-report", icon: reportsIcon },
+  { label: "Food Wastage Report",  path: "/super-admin/food-wastage-report",          icon: reportsIcon },
+  { label: "Menu Overview",        path: "/super-admin/menu-overview",                icon: menuOverviewIcon },
   { label: "Organizations",   path: "/super-admin/organizations",  icon: vendorsIcon },
-  { label: "Plans & Billing", path: "/super-admin/plans",          icon: reportsIcon },
-  { label: "All Users",       path: "/super-admin/users",          icon: usersIcon },
-  { label: "Analytics",       path: "/super-admin/analytics",      icon: menuOverviewIcon },
-  { label: "Audit Logs",      path: "/super-admin/audit-logs",     icon: reportsIcon },
 ];
 
 const bottomNavItems = [
@@ -46,11 +52,23 @@ export default function SuperAdminSidebar() {
     navigate("/login", { replace: true });
   };
 
-  const getIsActive = (path: string) =>
-    path === "/super-admin/overview"
-      ? location.pathname === "/super-admin" || location.pathname === "/super-admin/overview"
-      : location.pathname.startsWith(path);
+ const exactMatchPaths = new Set([
+  "/super-admin/vendors",
+  "/super-admin/users",
+]);
 
+const getIsActive = (path: string) => {
+  if (path === "/super-admin/overview") {
+    return (
+      location.pathname === "/super-admin" ||
+      location.pathname === "/super-admin/overview"
+    );
+  }
+  if (exactMatchPaths.has(path)) {
+    return location.pathname === path;
+  }
+  return location.pathname.startsWith(path);
+};
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (

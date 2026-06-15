@@ -1,21 +1,29 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Building2, ChevronDown, Check } from "lucide-react";
 import { fetchMe } from "../../slices/authSlice";
+import {
+  fetchSuperOrgOptions,
+  setSuperFilters,
+  fetchSuperAnalyticsSummary,
+  fetchSuperMealsChart,
+  fetchSuperAttendanceChart,
+  fetchSuperRecentActivity,
+  DEFAULT_SUPER_FILTERS,
+} from "../../slices/superAdmin/superAdminAnalyticsSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 
-// ── Searchable pages for super admin ────────────────────────────────────────
-
 const SEARCH_ITEMS = [
-  { label: "Overview",           path: "/super-admin/overview",       keywords: ["home", "dashboard", "main"] },
-  { label: "Organizations",      path: "/super-admin/organizations",  keywords: ["orgs", "companies", "clients", "tenants"] },
-  { label: "Plans & Billing",    path: "/super-admin/plans",          keywords: ["subscription", "payment", "invoice", "pricing"] },
-  { label: "All Users",          path: "/super-admin/users",          keywords: ["people", "accounts", "members"] },
-  { label: "Analytics",          path: "/super-admin/analytics",      keywords: ["stats", "reports", "metrics", "data"] },
-  { label: "Audit Logs",         path: "/super-admin/audit-logs",     keywords: ["logs", "history", "activity", "trail"] },
-  { label: "Platform Settings",  path: "/super-admin/settings",       keywords: ["config", "preferences", "options"] },
-  { label: "Notifications",      path: "/super-admin/notifications",  keywords: ["alerts", "bell"] },
-  { label: "Profile",            path: "/super-admin/profile",        keywords: ["account", "me", "my profile"] },
+  { label: "Overview",          path: "/super-admin/overview",      keywords: ["home", "dashboard", "main"] },
+  { label: "Organizations",     path: "/super-admin/organizations", keywords: ["orgs", "companies", "clients", "tenants"] },
+  { label: "Plans & Billing",   path: "/super-admin/plans",         keywords: ["subscription", "payment", "invoice", "pricing"] },
+  { label: "All Users",         path: "/super-admin/users",         keywords: ["people", "accounts", "members"] },
+  { label: "Analytics",         path: "/super-admin/analytics",     keywords: ["stats", "reports", "metrics", "data"] },
+  { label: "Audit Logs",        path: "/super-admin/audit-logs",    keywords: ["logs", "history", "activity", "trail"] },
+  { label: "Platform Settings", path: "/super-admin/settings",      keywords: ["config", "preferences", "options"] },
+  { label: "Notifications",     path: "/super-admin/notifications", keywords: ["alerts", "bell"] },
+  { label: "Profile",           path: "/super-admin/profile",       keywords: ["account", "me", "my profile"] },
 ];
 
 function filterItems(query: string) {
@@ -27,8 +35,6 @@ function filterItems(query: string) {
       item.keywords.some((k) => k.includes(q))
   );
 }
-
-// ── Highlight matched text ───────────────────────────────────────────────────
 
 function Highlight({ text, query }: { text: string; query: string }) {
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -44,56 +50,67 @@ function Highlight({ text, query }: { text: string; query: string }) {
   );
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
-
 const SuperAdminHeader = () => {
-  const [query, setQuery]                   = useState("");
-  const [open, setOpen]                     = useState(false);
-  const [activeIndex, setActiveIndex]       = useState(0);
+  const [query, setQuery]                       = useState("");
+  const [searchOpen, setSearchOpen]             = useState(false);
+  const [activeIndex, setActiveIndex]           = useState(0);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [orgOpen, setOrgOpen]                   = useState(false);
 
   const navigate  = useNavigate();
   const location  = useLocation();
   const dispatch  = useDispatch<AppDispatch>();
-  const { user }  = useSelector((s: RootState) => s.auth);
+
+  const { user }                          = useSelector((s: RootState) => s.auth);
+  const { orgOptions, orgOptionsLoading, filters } = useSelector((s: RootState) => s.superAnalytics);
+  const activeOrgId = filters.orgId;
 
   const inputRef     = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const searchRef    = useRef<HTMLDivElement>(null);
+  const orgRef       = useRef<HTMLDivElement>(null);
 
   const isNotifications = location.pathname === "/super-admin/notifications";
   const isProfile       = location.pathname === "/super-admin/profile";
 
+  // Fetch user + org options on mount
   React.useEffect(() => {
     if (!user) dispatch(fetchMe());
+    dispatch(fetchSuperOrgOptions());
   }, []);
 
   const results = filterItems(query);
 
-  // Close dropdown on outside click
+  // Close search dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node))
+        setSearchOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Reset active index when results change
+  // Close org dropdown on outside click
   useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
+    const handler = (e: MouseEvent) => {
+      if (orgRef.current && !orgRef.current.contains(e.target as Node))
+        setOrgOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => { setActiveIndex(0); }, [query]);
 
   const handleSelect = (path: string) => {
     navigate(path);
     setQuery("");
-    setOpen(false);
+    setSearchOpen(false);
     setMobileSearchOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!open || results.length === 0) return;
+    if (!searchOpen || results.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIndex((i) => (i + 1) % results.length);
@@ -104,20 +121,34 @@ const SuperAdminHeader = () => {
       e.preventDefault();
       if (results[activeIndex]) handleSelect(results[activeIndex].path);
     } else if (e.key === "Escape") {
-      setOpen(false);
+      setSearchOpen(false);
       setQuery("");
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
-    setOpen(true);
+    setSearchOpen(true);
   };
+
+  const handleOrgSwitch = (orgId: string) => {
+    setOrgOpen(false);
+    if (orgId === activeOrgId) return;
+    const newFilters = { ...DEFAULT_SUPER_FILTERS, orgId };
+    dispatch(setSuperFilters({ orgId }));
+    dispatch(fetchSuperAnalyticsSummary(newFilters));
+    dispatch(fetchSuperMealsChart(newFilters));
+    dispatch(fetchSuperAttendanceChart(newFilters));
+    dispatch(fetchSuperRecentActivity({ limit: 50, orgId }));
+  };
+
+  const activeLabel =
+    activeOrgId === "all"
+      ? "All Organizations"
+      : orgOptions.find(o => o.value === activeOrgId)?.label ?? "All Organizations";
 
   const avatarSrc = user?.avatar || null;
   const initials  = user?.name?.[0]?.toUpperCase() ?? "S";
-
-  // ── Avatar ───────────────────────────────────────────────────────────────
 
   const Avatar = () =>
     avatarSrc ? (
@@ -128,16 +159,12 @@ const SuperAdminHeader = () => {
       </div>
     );
 
-  // ── Search dropdown ──────────────────────────────────────────────────────
-
   const SearchDropdown = () => {
-    if (open && results.length > 0) {
+    if (searchOpen && results.length > 0) {
       return (
         <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
           <div className="px-3 pt-2.5 pb-1">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-              Pages
-            </p>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Pages</p>
           </div>
           <ul>
             {results.map((item, i) => (
@@ -145,15 +172,11 @@ const SuperAdminHeader = () => {
                 <button
                   type="button"
                   onMouseEnter={() => setActiveIndex(i)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleSelect(item.path);
-                  }}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelect(item.path); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
                     i === activeIndex ? "bg-orange-50" : "hover:bg-gray-50"
                   }`}
                 >
-                  {/* Generic page icon */}
                   <div className="w-4 h-4 shrink-0 rounded bg-gray-100 flex items-center justify-center">
                     <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
@@ -163,38 +186,29 @@ const SuperAdminHeader = () => {
                     <Highlight text={item.label} query={query} />
                   </span>
                   {i === activeIndex && (
-                    <span className="ml-auto text-[10px] text-gray-400 font-medium">
-                      ↵ Enter
-                    </span>
+                    <span className="ml-auto text-[10px] text-gray-400 font-medium">↵ Enter</span>
                   )}
                 </button>
               </li>
             ))}
           </ul>
           <div className="px-3 py-2 border-t border-gray-100">
-            <p className="text-[10px] text-gray-400">
-              ↑ ↓ to navigate · Enter to select · Esc to close
-            </p>
+            <p className="text-[10px] text-gray-400">↑ ↓ to navigate · Enter to select · Esc to close</p>
           </div>
         </div>
       );
     }
-
-    if (open && query.trim().length > 0) {
+    if (searchOpen && query.trim().length > 0) {
       return (
         <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 px-4 py-4 text-center">
           <p className="text-sm text-gray-500">
-            No pages found for{" "}
-            <span className="font-medium text-gray-700">"{query}"</span>
+            No pages found for <span className="font-medium text-gray-700">"{query}"</span>
           </p>
         </div>
       );
     }
-
     return null;
   };
-
-  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <header className="w-full h-14 px-6 flex items-center justify-between border-b border-gray-200 bg-white font-[var(--font-inter)]">
@@ -218,7 +232,6 @@ const SuperAdminHeader = () => {
       {mobileSearchOpen && (
         <div className="absolute left-0 top-0 w-full h-auto bg-white px-4 pt-3 pb-2 flex flex-col gap-2 z-10 border-b border-gray-200 sm:hidden">
           <div className="flex items-center gap-3">
-            {/* Search icon */}
             <svg className="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="m21 21-4.35-4.35" />
             </svg>
@@ -232,28 +245,19 @@ const SuperAdminHeader = () => {
               className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none"
             />
             <button
-              onClick={() => {
-                setMobileSearchOpen(false);
-                setQuery("");
-                setOpen(false);
-              }}
+              onClick={() => { setMobileSearchOpen(false); setQuery(""); setSearchOpen(false); }}
               className="text-gray-500 text-sm font-medium"
             >
               Cancel
             </button>
           </div>
-
-          {/* Mobile results */}
-          {open && results.length > 0 && (
+          {searchOpen && results.length > 0 && (
             <ul className="pb-1">
               {results.map((item) => (
                 <li key={item.path}>
                   <button
                     type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelect(item.path);
-                    }}
+                    onMouseDown={(e) => { e.preventDefault(); handleSelect(item.path); }}
                     className="w-full flex items-center gap-3 px-1 py-2.5 text-left hover:bg-orange-50 rounded-xl transition-colors"
                   >
                     <div className="w-4 h-4 shrink-0 rounded bg-gray-100" />
@@ -265,10 +269,8 @@ const SuperAdminHeader = () => {
               ))}
             </ul>
           )}
-          {open && query.trim().length > 0 && results.length === 0 && (
-            <p className="text-sm text-gray-400 px-1 pb-2">
-              No pages found for "{query}"
-            </p>
+          {searchOpen && query.trim().length > 0 && results.length === 0 && (
+            <p className="text-sm text-gray-400 px-1 pb-2">No pages found for "{query}"</p>
           )}
         </div>
       )}
@@ -282,8 +284,84 @@ const SuperAdminHeader = () => {
           Super Admin
         </span>
 
-        {/* Desktop search with dropdown */}
-        <div ref={containerRef} className="relative hidden sm:block">
+        {/* ── Org picker pill — desktop only ── */}
+        <div ref={orgRef} className="relative hidden sm:block">
+          {orgOptionsLoading ? (
+            <div className="h-8 w-36 bg-gray-100 animate-pulse rounded-xl" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setOrgOpen(o => !o)}
+              className="flex items-center gap-1.5 px-3 h-8 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:border-orange-300 hover:text-orange-500 transition-colors shadow-sm max-w-[200px]"
+            >
+              <Building2 className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+              <span className="truncate">{activeLabel}</span>
+              <ChevronDown
+                className={`w-3 h-3 text-gray-400 shrink-0 transition-transform duration-200 ${orgOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+
+          {orgOpen && !orgOptionsLoading && (
+            <div className="absolute top-full right-0 mt-1.5 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+              <p className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                Organization
+              </p>
+              <div className="pb-1.5 max-h-64 overflow-y-auto">
+                {/* All Organizations */}
+                <button
+                  type="button"
+                  onClick={() => handleOrgSwitch("all")}
+                  className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 text-sm transition-colors ${
+                    activeOrgId === "all"
+                      ? "bg-orange-50 text-orange-600 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                    activeOrgId === "all" ? "bg-orange-100 text-orange-500" : "bg-gray-100 text-gray-500"
+                  }`}>
+                    All
+                  </div>
+                  <span className="truncate flex-1">All Organizations</span>
+                  {activeOrgId === "all" && <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />}
+                </button>
+
+                {/* Individual orgs */}
+                {orgOptions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-gray-400 italic">No organizations found</p>
+                ) : (
+                  orgOptions.map(org => {
+                    const isActive = org.value === activeOrgId;
+                    return (
+                      <button
+                        key={org.value}
+                        type="button"
+                        onClick={() => handleOrgSwitch(org.value)}
+                        className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 text-sm transition-colors ${
+                          isActive
+                            ? "bg-orange-50 text-orange-600 font-semibold"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                          isActive ? "bg-orange-100 text-orange-500" : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {org.label?.[0]?.toUpperCase() ?? "O"}
+                        </div>
+                        <span className="truncate flex-1">{org.label}</span>
+                        {isActive && <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop search */}
+        <div ref={searchRef} className="relative hidden sm:block">
           <div className="flex items-center gap-2 bg-[#EEEEEE] rounded-xl px-3 py-1.5">
             <svg className="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="m21 21-4.35-4.35" />
@@ -294,18 +372,14 @@ const SuperAdminHeader = () => {
               value={query}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
-              onFocus={() => query.trim() && setOpen(true)}
+              onFocus={() => query.trim() && setSearchOpen(true)}
               placeholder="Search pages..."
               className="bg-transparent text-sm text-gray-800 placeholder:text-[#6B7280] outline-none w-44"
             />
             {query && (
               <button
                 type="button"
-                onClick={() => {
-                  setQuery("");
-                  setOpen(false);
-                  inputRef.current?.focus();
-                }}
+                onClick={() => { setQuery(""); setSearchOpen(false); inputRef.current?.focus(); }}
                 className="text-gray-400 hover:text-gray-600 text-xs leading-none"
               >
                 ✕
@@ -333,17 +407,12 @@ const SuperAdminHeader = () => {
           onClick={() => navigate("/super-admin/notifications")}
           aria-label="Notifications"
           className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
-            isNotifications
-              ? "bg-orange-100 ring-2 ring-orange-400"
-              : "hover:bg-gray-100"
+            isNotifications ? "bg-orange-100 ring-2 ring-orange-400" : "hover:bg-gray-100"
           }`}
         >
           <svg
             className={`w-5 h-5 ${isNotifications ? "text-[#EA580C]" : "text-gray-500"}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6.002 6.002 0 0 0-4-5.659V5a2 2 0 1 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
           </svg>
