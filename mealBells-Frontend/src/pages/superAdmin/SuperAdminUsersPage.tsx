@@ -2,14 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector }    from "react-redux";
 import { useNavigate }                 from "react-router-dom";
-import { Search, Plus, Trash2, Pencil, X, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { Search, Plus, Trash2, Pencil, X } from "lucide-react";
 import type { AppDispatch, RootState } from "../../app/store";
 import {
   fetchSuperUsers,
   updateSuperUser,
   toggleSuperUserStatus,
   deleteSuperUser,
-  clearNewUserCredentials,
   clearError,
   type SuperUserRecord,
 } from "../../slices/superAdmin/superAdminUsersSlice";

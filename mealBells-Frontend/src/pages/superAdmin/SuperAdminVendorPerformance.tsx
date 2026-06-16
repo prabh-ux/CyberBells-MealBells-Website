@@ -18,7 +18,6 @@ import TrendChip    from "../../components/admin/VendorPerformance/TrendChip";
 import ChartTooltip from "../../components/admin/VendorPerformance/ChartTooltip";
 import StarRating   from "../../components/admin/VendorPerformance/StarRating";
 import StatusBadge  from "../../components/admin/VendorPerformance/StatusBadge";
-import SuperAdminDashboardHeader from "../../components/superAdmin/SuperAdminDashboardHeader";
 
 import {
   fetchSuperVendorList,

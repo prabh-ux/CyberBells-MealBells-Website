@@ -11,13 +11,17 @@ import type { AppDispatch, RootState }         from "../../app/store";
 
 const ROLES = [ "Super Admin", "System Admin","Department Head", "Vendor", "Standard User" ] as const;
 
-const ProfileSettings = () => {
+const SuperAdminProfileSettings = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user, loading, saving } = useSelector((s: RootState) => s.auth);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isSystemAdmin = user?.role === "System Admin";
+
+  // Super admin sits above the org role hierarchy (role/department don't apply
+  // the same way) — type === "admin" already implies full platform access,
+  // so the role dropdown is always unlocked here.
+  const isSystemAdmin = true;
 
   const [name,      setName]      = useState("");
   const [phone,     setPhone]     = useState("");
@@ -34,7 +38,7 @@ const ProfileSettings = () => {
     setName(user.name     ?? "");
     setPhone(user.phone   ?? "");
     setEmail(user.email   ?? "");
-    setRole(user.role     ?? "Standard User");
+    setRole(user.role     ?? "System Admin");
     setAvatarUrl(user.avatar ?? "");
   }, [user]);
 
@@ -67,7 +71,7 @@ const ProfileSettings = () => {
     setName(user.name     ?? "");
     setPhone(user.phone   ?? "");
     setEmail(user.email   ?? "");
-    setRole(user.role     ?? "Standard User");
+    setRole(user.role     ?? "System Admin");
     setAvatarUrl(user.avatar ?? "");
     setImageFile(null);
   };
@@ -120,7 +124,7 @@ const ProfileSettings = () => {
           </div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-[#FFF4EC] text-[#FA7000] border border-[#FFE3D1]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FA7000]" />
-            Verified {user?.type === "vendor" ? "Vendor" : "Admin"}
+            Verified Super Admin
           </span>
         </div>
 
@@ -210,20 +214,11 @@ const ProfileSettings = () => {
                     </div>
                   )}
                 </div>
-
-                {!isSystemAdmin && (
-                  <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> Only a System Admin can change role assignments.
-                  </p>
-                )}
               </div>
 
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                 <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-                  {isSystemAdmin
-                    ? <><strong className="text-slate-800">System Admin:</strong> You have full access including role management for all users.</>
-                    : <><strong className="text-slate-800">Role locked:</strong> You currently have full access to menu configuration and financial reports. Role changes require a System Admin.</>
-                  }
+                  <strong className="text-slate-800">Super Admin:</strong> You have full platform access, including organizations, vendors, users, and role management across the system.
                 </p>
               </div>
             </div>
@@ -285,4 +280,4 @@ const ProfileSettings = () => {
   );
 };
 
-export default ProfileSettings;
+export default SuperAdminProfileSettings;

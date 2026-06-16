@@ -100,6 +100,11 @@ export const updateMe = async (req, res) => {
   try {
     const { name, phone, email, role } = req.body;
 
+    
+    if (role === "Super Admin" && req.user.type !== "super_admin") {
+      return res.status(403).json({ msg: "Only a Super Admin can assign the Super Admin role." });
+    }
+
     if (email) {
       const exists = await userModel.findOne({ email, _id: { $ne: req.user.id } });
       if (exists) return res.status(409).json({ msg: "Email already in use" });

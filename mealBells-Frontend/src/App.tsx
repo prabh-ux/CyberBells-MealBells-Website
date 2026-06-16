@@ -54,7 +54,7 @@ import VendorSettings from "./pages/vendor/VendorSettings";
 import RequestedDishesByUsers from "./pages/admin/RequestedDishesByUsers";
 import AdminHelp from "./pages/admin/Adminhelp";
 
-import Organizations from "./pages/organization/Orgnaizations";
+import Organizations from "./pages/superAdmin/Orgnaizations";
 import OrganizationManagement from "./pages/vendor/OrganizationManagementVendor";
 import AddOrganization from "./pages/vendor/AddOrganizationVendor";
 import SuperAdminAnalyticsDashboard from "./pages/superAdmin/SuperAdminAnalyticsDashboard";
@@ -64,6 +64,16 @@ import SuperAdminVendors from "./pages/superAdmin/SuperAdminVendors";
 import SuperAdminAddVendor from "./pages/superAdmin/SuperAdminAddVendor";
 import SuperAdminAddUser from "./pages/superAdmin/SuperAdminAddUser";
 import SuperAdminVendorPerformance from "./pages/superAdmin/SuperAdminVendorPerformance";
+import SuperAdminAttendanceSummary from "./pages/superAdmin/SuperAdminAttendanceSummary";
+import SuperAdminConsumptionPage from "./pages/superAdmin/SuperAdminConsumptionPage";
+import SuperAdminFoodWastagePage from "./pages/superAdmin/SuperAdminFoodWastagePage";
+import SuperAdminAddEditDish from "./pages/superAdmin/SuperAdminAddEditDish";
+import SuperAdminCreateOrganization from "./pages/superAdmin/SuperAdminCreateOrganization";
+import SuperAdminEditOrganization from "./pages/superAdmin/SuperAdminEditOrganization";
+import SuperAdminMenuOverview from "./pages/superAdmin/SuperAdminMenuOverview";
+import SuperAdminSettings from "./pages/superAdmin/SuperAdminSettings";
+import SuperAdminProfileSettings from "./pages/superAdmin/SuperAdminProfileSettings";
+import SystemAdminNotifications from "./pages/superAdmin/SystemAdminNotifications";
 
 function App() {
   const location = useLocation();
@@ -136,35 +146,82 @@ function App() {
                 path="/super-admin"
                 element={<Navigate to="/super-admin/organizations" replace />}
               />
-             <Route
+              <Route
                 path="/super-admin/dashboard"
                 element={<SuperAdminAnalyticsDashboard />}
               />
-              <Route path="/super-admin/vendors" element={<SuperAdminVendors />} />
-<Route path="/super-admin/vendors/add" element={<SuperAdminAddVendor />} />
-
-
+              <Route
+                path="/super-admin/vendors"
+                element={<SuperAdminVendors />}
+              />
+              <Route
+                path="/super-admin/vendors/add"
+                element={<SuperAdminAddVendor />}
+              />
               <Route
                 path="/super-admin/organizations"
                 element={<Organizations />}
               />
-              <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
-              <Route path="/super-admin/requested-dishes" element={<SuperAdminDishRequests />} />
-<Route path="/super-admin/users/add" element={<SuperAdminAddUser />} />
-<Route path="super-admin/vendors-performance" element={<SuperAdminVendorPerformance />} />
-
-              {/* Uncomment as you build these pages:
-              <Route path="/super-admin/overview"             element={<SuperAdminOverview />} />
-              <Route path="/super-admin/organizations/:id"    element={<OrganizationDetail />} />
-              <Route path="/super-admin/organizations/new"    element={<AddOrganization />} />
-              <Route path="/super-admin/plans"                element={<PlansAndBilling />} />
-              <Route path="/super-admin/users"                element={<AllUsers />} />
-              <Route path="/super-admin/analytics"            element={<SuperAdminAnalytics />} />
-              <Route path="/super-admin/audit-logs"           element={<AuditLogs />} />
-              <Route path="/super-admin/settings"             element={<PlatformSettings />} />
-              <Route path="/super-admin/notifications"        element={<SuperAdminNotifications />} />
-              <Route path="/super-admin/profile"              element={<SuperAdminProfile />} />
-              */}
+              <Route
+                path="/super-admin/users"
+                element={<SuperAdminUsersPage />}
+              />
+              <Route
+                path="/super-admin/requested-dishes"
+                element={<SuperAdminDishRequests />}
+              />
+              <Route
+                path="/super-admin/users/add"
+                element={<SuperAdminAddUser />}
+              />
+              <Route
+                path="super-admin/vendors-performance"
+                element={<SuperAdminVendorPerformance />}
+              />
+              <Route
+                path="super-admin/attendance"
+                element={<SuperAdminAttendanceSummary />}
+              />
+              <Route
+                path="/super-admin/consumption-analytics-report"
+                element={<SuperAdminConsumptionPage />}
+              />
+              <Route
+                path="/super-admin/food-wastage-report"
+                element={<SuperAdminFoodWastagePage />}
+              />
+              <Route
+                path="/super-admin/menu-overview"
+                element={<SuperAdminMenuOverview />}
+              />
+              <Route
+                path="/super-admin/menu-management"
+                element={<SuperAdminAddEditDish />}
+              />{" "}
+              <Route
+                path="/super-admin/menu-management/:id"
+                element={<SuperAdminAddEditDish />}
+              />
+              <Route
+                path="/super-admin/organizations/create"
+                element={<SuperAdminCreateOrganization />}
+              />
+              <Route
+                path="/super-admin/organizations/:id/edit"
+                element={<SuperAdminEditOrganization />}
+              />
+              <Route
+                path="/super-admin/settings"
+                element={<SuperAdminSettings />}
+              />
+              <Route
+                path="/super-admin/profile"
+                element={<SuperAdminProfileSettings />}
+              />
+              <Route
+                path="/super-admin/notifications"
+                element={<SystemAdminNotifications />}
+              />
             </Route>
 
             {/* ── Admin — requires auth + admin type ── */}

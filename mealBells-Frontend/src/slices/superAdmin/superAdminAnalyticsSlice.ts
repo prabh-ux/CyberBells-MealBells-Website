@@ -18,6 +18,7 @@ export interface ActivityItem {
   action: string; status: string; initials: string; bgColor: string; color: string;
 }
 export interface VendorOption { label: string; value: string; }
+export interface OrgOption    { label: string; value: string; }
 
 export interface SuperAnalyticsFilters {
   days:     7 | 14 | 30;
@@ -97,9 +98,6 @@ export const fetchSuperRecentActivity = createAsyncThunk(
   }
 );
 
-// Fetch all organizations for the dropdown
-export interface OrgOption { label: string; value: string; }
-
 export const fetchSuperOrgOptions = createAsyncThunk(
   "superAnalytics/fetchOrgOptions",
   async (_, { rejectWithValue }) => {
@@ -108,6 +106,20 @@ export const fetchSuperOrgOptions = createAsyncThunk(
       return data.orgs as OrgOption[];
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.msg ?? "Failed to fetch org options.");
+    }
+  }
+);
+
+export const fetchSuperFilterOptions = createAsyncThunk(
+  "superAnalytics/fetchFilterOptions",
+  async (orgId: string = "all", { rejectWithValue }) => {
+    try {
+      const p = new URLSearchParams();
+      if (orgId !== "all") p.set("orgId", orgId);
+      const { data } = await axiosInstance.get(`/super-admin/analytics/filter-options?${p}`);
+      return data.vendors as VendorOption[];
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.msg ?? "Failed to fetch filter options.");
     }
   }
 );
@@ -122,6 +134,10 @@ const superAnalyticsSlice = createSlice({
     // Org options for header dropdown
     orgOptions:        [] as OrgOption[],
     orgOptionsLoading: false,
+
+    // Vendor options for the analytics filter dropdown (scoped by orgId)
+    vendorOptions:        [] as VendorOption[],
+    filterOptionsLoading: false,
 
     // Summary
     summary:        null as AnalyticsSummary | null,
@@ -156,6 +172,12 @@ const superAnalyticsSlice = createSlice({
       .addCase(fetchSuperOrgOptions.pending,   s => { s.orgOptionsLoading = true; })
       .addCase(fetchSuperOrgOptions.fulfilled, (s, { payload }) => { s.orgOptionsLoading = false; s.orgOptions = payload; })
       .addCase(fetchSuperOrgOptions.rejected,  s => { s.orgOptionsLoading = false; });
+
+    // Vendor filter options
+    builder
+      .addCase(fetchSuperFilterOptions.pending,   s => { s.filterOptionsLoading = true; })
+      .addCase(fetchSuperFilterOptions.fulfilled, (s, { payload }) => { s.filterOptionsLoading = false; s.vendorOptions = payload; })
+      .addCase(fetchSuperFilterOptions.rejected,  s => { s.filterOptionsLoading = false; });
 
     // Summary
     builder

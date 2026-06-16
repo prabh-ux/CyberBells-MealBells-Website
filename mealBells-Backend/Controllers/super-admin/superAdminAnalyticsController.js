@@ -339,3 +339,228 @@ export const getSuperRecentActivity = async (req, res) => {
     return res.status(500).json({ success: false, msg: err.message });
   }
 };
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /super-admin/analytics/filter-options
+// Returns vendor dropdown options scoped to the selected org(s)
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /super-admin/analytics/filter-options
+// ─────────────────────────────────────────────────────────────────────────────
+export const getSuperFilterOptions = async (req, res) => {
+  try {
+    const orgId  = req.query.orgId || "all";
+    const orgIds = await resolveOrgIds(orgId);
+
+    const vendors = await userModel
+      .find({ type: "vendor", status: true, organizationId: { $in: orgIds } }, "name _id")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      vendors: vendors.map(v => ({ label: v.name, value: String(v._id) })),
+    });
+  } catch (err) {
+    console.error("[getSuperFilterOptions]", err);
+    return res.status(500).json({ success: false, msg: err.message });
+  }
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /super-admin/analytics/consumption-breakdown
+// ─────────────────────────────────────────────────────────────────────────────
+export const getSuperConsumptionBreakdown = async (req, res) => {
+  try {
+    const days       = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 30);
+    const orgId      = req.query.orgId      || "all";
+    const department = req.query.department || "all";
+    const vendorId   = req.query.vendorId   || "all";
+    const mealType   = req.query.mealType   || "all";
+
+    const { baseMatch, mealTypeLookup } = await buildSuperFilters({
+      days, orgId, department, vendorId, mealType,
+    });
+
+    const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+    const mealTypeAgg = await Attendance.aggregate([
+      { $match: baseMatch },
+      ...mealTypeLookup,
+      { $lookup: { from: "menuschedules", localField: "scheduleId", foreignField: "_id", as: "_ms" } },
+      { $unwind: { path: "$_ms", preserveNullAndEmptyArrays: true } },
+      { $lookup: { from: "dishes", localField: "_ms.dish", foreignField: "_id", as: "_dish" } },
+      { $unwind: { path: "$_dish", preserveNullAndEmptyArrays: true } },
+      { $group: { _id: { $ifNull: ["$_dish.dishType", "Unknown"] }, count: { $sum: 1 } } },
+    ]);
+
+    const typeMap     = Object.fromEntries(mealTypeAgg.map(t => [t._id, t.count]));
+    const vegCount    = typeMap["Veg"]     || 0;
+    const nonVegCount = typeMap["Non-Veg"] || 0;
+    const bothCount   = typeMap["Both"]    || 0;
+    const rawTotal    = vegCount + nonVegCount + bothCount || 1;
+
+    const mealTypeBreakdown = {
+      vegCount, nonVegCount, bothCount,
+      total:  rawTotal,
+      veg:    Math.round((vegCount    / rawTotal) * 100),
+      nonVeg: Math.round((nonVegCount / rawTotal) * 100),
+      both:   Math.round((bothCount   / rawTotal) * 100),
+    };
+
+    const topDishAgg = await Attendance.aggregate([
+      { $match: { ...baseMatch, scheduleId: { $ne: null } } },
+      ...mealTypeLookup,
+      { $group: { _id: "$scheduleId", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+      { $lookup: { from: "menuschedules", localField: "_id", foreignField: "_id", as: "_ms" } },
+      { $unwind: "$_ms" },
+      { $lookup: { from: "dishes", localField: "_ms.dish", foreignField: "_id", as: "_dish" } },
+      { $unwind: "$_dish" },
+      { $project: { name: "$_dish.name", count: 1 } },
+    ]);
+
+    const topDish = topDishAgg[0]
+      ? { name: topDishAgg[0].name, count: topDishAgg[0].count, popularity: Math.min(100, Math.round((topDishAgg[0].count / rawTotal) * 100)) }
+      : { name: "N/A", count: 0, popularity: 0 };
+
+    const deptAgg = await Attendance.aggregate([
+      { $match: baseMatch },
+      ...mealTypeLookup,
+      { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "_user" } },
+      { $unwind: "$_user" },
+      { $match: { "_user.type": "user" } },
+      { $group: { _id: { $ifNull: ["$_user.department", "Unknown"] }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+    ]);
+    const mostActiveDept = deptAgg[0]
+      ? { name: deptAgg[0]._id, count: deptAgg[0].count }
+      : { name: "N/A", count: 0 };
+
+    const dayAgg = await Attendance.aggregate([
+      { $match: baseMatch },
+      ...mealTypeLookup,
+      { $group: { _id: { $dayOfWeek: "$date" }, count: { $sum: 1 } } },
+      { $sort: { count: 1 } },
+      { $limit: 1 },
+    ]);
+    const leastActiveDay = dayAgg[0]
+      ? { name: DAY_NAMES[dayAgg[0]._id - 1], dayOfWeek: dayAgg[0]._id, count: dayAgg[0].count }
+      : { name: "N/A", dayOfWeek: null, count: 0 };
+
+    const DOW_TO_IDX = { 2: 0, 3: 1, 4: 2, 5: 3, 6: 4, 7: 5, 1: 6 };
+
+    const topDeptsAgg = await Attendance.aggregate([
+      { $match: baseMatch },
+      ...mealTypeLookup,
+      { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "_user" } },
+      { $unwind: "$_user" },
+      { $match: { "_user.type": "user" } },
+      { $group: { _id: { $ifNull: ["$_user.department", "Unknown"] }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 4 },
+    ]);
+    const topDepts = topDeptsAgg.map(d => d._id).filter(Boolean);
+
+    let heatmap = [];
+    if (topDepts.length) {
+      const heatmapAgg = await Attendance.aggregate([
+        { $match: baseMatch },
+        ...mealTypeLookup,
+        { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "_user" } },
+        { $unwind: "$_user" },
+        { $match: { "_user.type": "user", "_user.department": { $in: topDepts } } },
+        { $group: { _id: { department: "$_user.department", dow: { $dayOfWeek: "$date" } }, count: { $sum: 1 } } },
+      ]);
+
+      const map = Object.fromEntries(topDepts.map(d => [d, Array(7).fill(0)]));
+      for (const row of heatmapAgg) {
+        const idx = DOW_TO_IDX[row._id.dow];
+        if (map[row._id.department] && idx !== undefined)
+          map[row._id.department][idx] = row.count;
+      }
+      heatmap = topDepts.map(dept => ({ dept: dept.slice(0, 12), counts: map[dept] }));
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: { topDish, mostActiveDept, leastActiveDay, mealTypeBreakdown, heatmap },
+    });
+  } catch (err) {
+    console.error("[getSuperConsumptionBreakdown]", err);
+    return res.status(500).json({ success: false, msg: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /super-admin/analytics/live-feed
+// ─────────────────────────────────────────────────────────────────────────────
+export const getSuperLiveFeed = async (req, res) => {
+  try {
+    const limit      = Math.min(parseInt(req.query.limit) || 20, 100);
+    const orgId      = req.query.orgId      || "all";
+    const department = req.query.department || "all";
+    const vendorId   = req.query.vendorId   || "all";
+    const mealType   = req.query.mealType   || "all";
+
+    const orgIds = await resolveOrgIds(orgId);
+
+    const deptFilter = department !== "all"
+      ? { department: { $regex: new RegExp(`^${department}$`, "i") } }
+      : {};
+
+    const userIds = await resolveUserIds(orgIds, deptFilter);
+    const baseFilter = { response: "yes", userId: { $in: userIds } };
+
+    if (vendorId !== "all" && mongoose.Types.ObjectId.isValid(vendorId)) {
+      const dishes    = await Dish.find({ vendor: new mongoose.Types.ObjectId(vendorId) }, "_id").lean();
+      const schedules = await MenuSchedule.find({ dish: { $in: dishes.map(d => d._id) } }, "_id").lean();
+      baseFilter.scheduleId = { $in: schedules.map(s => s._id) };
+    }
+
+    let records = await Attendance.find(baseFilter)
+      .sort({ createdAt: -1 })
+      .limit(mealType !== "all" ? limit * 4 : limit)
+      .populate({ path: "userId", select: "name department avatar" })
+      .lean();
+
+    const schedIds  = [...new Set(records.map(r => String(r.scheduleId)).filter(Boolean))];
+    const schedules = await MenuSchedule.find({ _id: { $in: schedIds } })
+      .populate({ path: "dish", select: "name dishType" })
+      .lean();
+    const scheduleMap = Object.fromEntries(schedules.map(s => [String(s._id), s]));
+
+    if (mealType !== "all") {
+      const allowed = mealType === "Veg" ? ["Veg", "Both"] : ["Non-Veg", "Both"];
+      records = records.filter(r => {
+        const dish = scheduleMap[String(r.scheduleId)]?.dish;
+        return dish && allowed.includes(dish.dishType);
+      });
+    }
+
+    const now  = Date.now();
+    const feed = records.slice(0, limit).map(r => {
+      const ts       = r.createdAt ? new Date(r.createdAt) : new Date(r.date);
+      const schedule = scheduleMap[String(r.scheduleId)] ?? null;
+      const dish     = schedule?.dish ?? null;
+      return {
+        time:       ts.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        employee:   r.userId?.name       ?? "Unknown",
+        department: r.userId?.department ?? "Unknown",
+        avatar:     r.userId?.avatar     ?? "",
+        item:       dish?.name           ?? "No dish linked",
+        dishType:   dish?.dishType       ?? "",
+        status:     schedule?.scheduledDate && now < new Date(schedule.scheduledDate).getTime()
+          ? "IN PREP" : "SERVED",
+      };
+    });
+
+    return res.status(200).json({ success: true, data: feed });
+  } catch (err) {
+    console.error("[getSuperLiveFeed]", err);
+    return res.status(500).json({ success: false, msg: err.message });
+  }
+};

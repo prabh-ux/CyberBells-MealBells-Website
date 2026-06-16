@@ -1,15 +1,9 @@
-import { useEffect, useRef, useState }   from "react";
+import { useEffect }   from "react";
 import { useDispatch, useSelector }        from "react-redux";
-import { Building2, ChevronDown, Check }   from "lucide-react";
 import uploadIconWhite                     from "../../assets/uploadIconWhite.png";
 import {
   fetchSuperOrgOptions,
-  setSuperFilters,
-  fetchSuperAnalyticsSummary,
-  fetchSuperMealsChart,
-  fetchSuperAttendanceChart,
-  fetchSuperRecentActivity,
-  DEFAULT_SUPER_FILTERS,
+
 } from "../../slices/superAdmin/superAdminAnalyticsSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 
@@ -18,16 +12,10 @@ interface Props {
   mealRange:  string;             // passed down so header can re-fetch on org change
 }
 
-const RANGE_TO_DAYS: Record<string, 7 | 14 | 30> = {
-  "Last 7 Days":  7,
-  "Last 14 Days": 14,
-  "Last 30 Days": 30,
-};
 
-const SuperAdminDashboardHeader = ({ onExport, mealRange }: Props) => {
+
+const SuperAdminDashboardHeader = ({ onExport }: Props) => {
   const dispatch    = useDispatch<AppDispatch>();
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
 
   const { orgOptions, filters } = useSelector((s: RootState) => s.superAnalytics);
   const activeOrgId = filters.orgId;
@@ -37,29 +25,9 @@ const SuperAdminDashboardHeader = ({ onExport, mealRange }: Props) => {
     if (!orgOptions.length) dispatch(fetchSuperOrgOptions());
   }, [dispatch]);
 
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
-  const handleSwitch = (orgId: string) => {
-    setOpen(false);
-    if (orgId === activeOrgId) return;
 
-    const days = RANGE_TO_DAYS[mealRange] ?? 7;
-    const newFilters = { ...DEFAULT_SUPER_FILTERS, orgId, days };
 
-    dispatch(setSuperFilters({ orgId }));
-    dispatch(fetchSuperAnalyticsSummary(newFilters));
-    dispatch(fetchSuperMealsChart(newFilters));
-    dispatch(fetchSuperAttendanceChart(newFilters));
-    dispatch(fetchSuperRecentActivity({ limit: 50, orgId }));
-  };
 
   const activeLabel =
     activeOrgId === "all"

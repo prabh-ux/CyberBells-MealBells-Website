@@ -1,4 +1,3 @@
-// pages/super-admin/SuperAdminVendors.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -9,7 +8,6 @@ import {
   Drumstick,
   Flame,
   Leaf,
-  Mail,
   Phone,
   RefreshCw,
   Salad,
@@ -408,7 +406,6 @@ interface VendorCardProps {
 const VendorCard: React.FC<VendorCardProps> = ({
   vendor,
   toggling,
-  updating,
   deleting,
   activeOrgId,
   onToggle,

@@ -14,17 +14,46 @@ import {
 } from "../../slices/superAdmin/superAdminAnalyticsSlice";
 import type { AppDispatch, RootState } from "../../app/store";
 
+
 const SEARCH_ITEMS = [
-  { label: "Overview",          path: "/super-admin/overview",      keywords: ["home", "dashboard", "main"] },
-  { label: "Organizations",     path: "/super-admin/organizations", keywords: ["orgs", "companies", "clients", "tenants"] },
-  { label: "Plans & Billing",   path: "/super-admin/plans",         keywords: ["subscription", "payment", "invoice", "pricing"] },
-  { label: "All Users",         path: "/super-admin/users",         keywords: ["people", "accounts", "members"] },
-  { label: "Analytics",         path: "/super-admin/analytics",     keywords: ["stats", "reports", "metrics", "data"] },
-  { label: "Audit Logs",        path: "/super-admin/audit-logs",    keywords: ["logs", "history", "activity", "trail"] },
-  { label: "Platform Settings", path: "/super-admin/settings",      keywords: ["config", "preferences", "options"] },
-  { label: "Notifications",     path: "/super-admin/notifications", keywords: ["alerts", "bell"] },
-  { label: "Profile",           path: "/super-admin/profile",       keywords: ["account", "me", "my profile"] },
+  { label: "Dashboard",           path: "/super-admin/dashboard",                    keywords: ["home", "overview", "main"] },
+  { label: "Organizations",       path: "/super-admin/organizations",                keywords: ["orgs", "companies", "clients", "tenants"] },
+  { label: "All Users",           path: "/super-admin/users",                        keywords: ["people", "accounts", "members"] },
+  { label: "Requested Dishes",    path: "/super-admin/requested-dishes",             keywords: ["dish requests", "requests"] },
+  { label: "Vendors",             path: "/super-admin/vendors",                      keywords: ["vendor list", "suppliers"] },
+  { label: "Vendors Performance", path: "/super-admin/vendors-performance",          keywords: ["vendor performance", "ratings"] },
+  { label: "Attendance",          path: "/super-admin/attendance",                   keywords: ["attendance summary"] },
+  { label: "Consumption Report",  path: "/super-admin/consumption-analytics-report", keywords: ["consumption", "analytics", "stats", "metrics"] },
+  { label: "Food Wastage Report", path: "/super-admin/food-wastage-report",          keywords: ["wastage", "waste", "reports"] },
+  { label: "Menu Overview",       path: "/super-admin/menu-overview",                keywords: ["menu", "dishes"] },
+  { label: "Menu Management",     path: "/super-admin/menu-management",              keywords: ["add dish", "edit dish"] },
+  { label: "Platform Settings",   path: "/super-admin/settings",                     keywords: ["config", "preferences", "options"] },
+  { label: "Notifications",       path: "/super-admin/notifications",                keywords: ["alerts", "bell"] },
+  { label: "Profile",             path: "/super-admin/profile",                      keywords: ["account", "me", "my profile"] },
 ];
+
+const ROUTE_LABELS: Record<string, string> = {
+  "overview":                       "Overview",
+  "organizations":                  "Organizations",
+  "plans":                          "Plans & Billing",
+  "users":                          "All Users",
+  "analytics":                      "Analytics",
+  "audit-logs":                     "Audit Logs",
+  "settings":                       "Platform Settings",
+  "notifications":                  "Notifications",
+  "profile":                        "Profile",
+  "menu-overview":                  "Menu Overview",
+  "menu-management":                "Menu Management",
+  "vendors":                        "Vendors",
+  "requested-dishes":               "Dish Requests",
+  "vendor-performance":             "Vendor Performance",
+  "vendors-performance":            "Vendor Performance",
+  "food-wastage-report":            "Food Wastage Report",
+  "consumption-analytics-report":   "Consumption Report",
+  "attendance":                     "Attendance",
+  "dashboard":                      "Dashboard",
+  "dish-requests":                  "Dish Requests",
+};
 
 function filterItems(query: string) {
   const q = query.toLowerCase().trim();
@@ -32,7 +61,7 @@ function filterItems(query: string) {
   return SEARCH_ITEMS.filter(
     (item) =>
       item.label.toLowerCase().includes(q) ||
-      item.keywords.some((k) => k.includes(q))
+      item.keywords.some((k) => k.toLowerCase().includes(q) || q.includes(k.toLowerCase()))
   );
 }
 
@@ -61,13 +90,13 @@ const SuperAdminHeader = () => {
   const location  = useLocation();
   const dispatch  = useDispatch<AppDispatch>();
 
-  const { user }                          = useSelector((s: RootState) => s.auth);
+  const { user }                                   = useSelector((s: RootState) => s.auth);
   const { orgOptions, orgOptionsLoading, filters } = useSelector((s: RootState) => s.superAnalytics);
   const activeOrgId = filters.orgId;
 
-  const inputRef     = useRef<HTMLInputElement>(null);
-  const searchRef    = useRef<HTMLDivElement>(null);
-  const orgRef       = useRef<HTMLDivElement>(null);
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const orgRef    = useRef<HTMLDivElement>(null);
 
   const isNotifications = location.pathname === "/super-admin/notifications";
   const isProfile       = location.pathname === "/super-admin/profile";
@@ -147,6 +176,14 @@ const SuperAdminHeader = () => {
       ? "All Organizations"
       : orgOptions.find(o => o.value === activeOrgId)?.label ?? "All Organizations";
 
+  const breadcrumbLabel = (() => {
+    const segments = location.pathname.split("/").filter(Boolean);
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (ROUTE_LABELS[segments[i]]) return ROUTE_LABELS[segments[i]];
+    }
+    return segments[1]?.replace(/-/g, " ") || "Overview";
+  })();
+
   const avatarSrc = user?.avatar || null;
   const initials  = user?.name?.[0]?.toUpperCase() ?? "S";
 
@@ -216,7 +253,7 @@ const SuperAdminHeader = () => {
       {/* Brand breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <button
-          onClick={() => navigate("/super-admin/overview")}
+          onClick={() => navigate("/super-admin/dashboard")}
           className="font-semibold text-[#EA580C] hover:opacity-80 transition-opacity"
         >
           <span className="sm:hidden">MB</span>
@@ -224,7 +261,7 @@ const SuperAdminHeader = () => {
         </button>
         <span className="text-gray-300 hidden sm:inline">/</span>
         <span className="text-gray-400 hidden sm:inline capitalize">
-          {location.pathname.split("/").pop()?.replace(/-/g, " ") || "Overview"}
+          {breadcrumbLabel}
         </span>
       </div>
 
@@ -284,7 +321,7 @@ const SuperAdminHeader = () => {
           Super Admin
         </span>
 
-        {/* ── Org picker pill — desktop only ── */}
+        {/* Org picker pill — desktop only */}
         <div ref={orgRef} className="relative hidden sm:block">
           {orgOptionsLoading ? (
             <div className="h-8 w-36 bg-gray-100 animate-pulse rounded-xl" />
@@ -308,7 +345,6 @@ const SuperAdminHeader = () => {
                 Organization
               </p>
               <div className="pb-1.5 max-h-64 overflow-y-auto">
-                {/* All Organizations */}
                 <button
                   type="button"
                   onClick={() => handleOrgSwitch("all")}
@@ -327,7 +363,6 @@ const SuperAdminHeader = () => {
                   {activeOrgId === "all" && <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />}
                 </button>
 
-                {/* Individual orgs */}
                 {orgOptions.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-gray-400 italic">No organizations found</p>
                 ) : (

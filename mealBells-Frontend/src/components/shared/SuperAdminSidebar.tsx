@@ -35,6 +35,14 @@ const bottomNavItems = [
   { label: "Platform Settings", path: "/super-admin/settings", icon: settingsIcon },
 ];
 
+// Routes that should highlight a different nav item than their own path
+// implies (e.g. menu-management is a sub-page of "Menu Overview", and has
+// no nav item of its own). Checked longest-prefix-first against the
+// current pathname.
+const ALIAS_PATHS: Record<string, string> = {
+  "/super-admin/menu-management": "/super-admin/menu-overview",
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SuperAdminSidebar() {
@@ -52,23 +60,32 @@ export default function SuperAdminSidebar() {
     navigate("/login", { replace: true });
   };
 
- const exactMatchPaths = new Set([
-  "/super-admin/vendors",
-  "/super-admin/users",
-]);
-
-const getIsActive = (path: string) => {
-  if (path === "/super-admin/overview") {
-    return (
-      location.pathname === "/super-admin" ||
-      location.pathname === "/super-admin/overview"
+  // Resolve the current pathname to the nav path it should highlight,
+  // applying any alias mapping for child routes that don't have their
+  // own nav item (e.g. /super-admin/menu-management/:id -> Menu Overview).
+  const resolveActivePath = () => {
+    const aliasMatch = Object.keys(ALIAS_PATHS).find(
+      prefix => location.pathname === prefix || location.pathname.startsWith(prefix + "/")
     );
-  }
-  if (exactMatchPaths.has(path)) {
-    return location.pathname === path;
-  }
-  return location.pathname.startsWith(path);
-};
+    return aliasMatch ? ALIAS_PATHS[aliasMatch] : location.pathname;
+  };
+
+  const getIsActive = (path: string) => {
+    if (path === "/super-admin/overview") {
+      return (
+        location.pathname === "/super-admin" ||
+        location.pathname === "/super-admin/overview"
+      );
+    }
+
+    const effectivePath = resolveActivePath();
+
+    // "/super-admin/vendors" must not also match "/super-admin/vendors-performance".
+    // Match on the exact path, or any deeper child segment (e.g. /vendors/add),
+    // but not a sibling path that merely starts with the same string.
+    if (effectivePath === path) return true;
+    return effectivePath.startsWith(path + "/");
+  };
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -163,7 +180,7 @@ const getIsActive = (path: string) => {
                 path={path}
                 icon={icon}
                 showLabel={mobileExpanded}
-                isActive={location.pathname === path}
+                isActive={getIsActive(path)}
                 onClick={handleNav}
               />
             ))}

@@ -74,23 +74,36 @@ export default function SuperAdminAnalyticsDashboard() {
   const [activeStatus, setActiveStatus] = useState("All");
   const filterRef = useRef<HTMLDivElement>(null);
 
-  // Initial load
-useEffect(() => {
-  const filters7 = makeFilters(7, activeOrgId);
-  dispatch(fetchSuperAnalyticsSummary(filters7));
-  dispatch(fetchSuperMealsChart(filters7));
-  dispatch(fetchSuperAttendanceChart(filters7));
-  dispatch(fetchSuperRecentActivity({ limit: 50, orgId: activeOrgId }));
-}, [dispatch, activeOrgId]);
+  // Mirror the latest cache into refs so the chart-fetch effect can read
+  // "is this already cached?" WITHOUT subscribing to the cache objects as
+  // dependencies. Subscribing to them caused a feedback loop: fetching meals
+  // updates `mealsChart` -> new object reference -> effect re-runs -> sees
+  // attendance not yet cached (it resolves slower) -> dispatches attendance
+  // again -> that update re-runs the effect again, etc.
+  const mealsChartRef      = useRef(mealsChart);
+  const attendanceChartRef = useRef(attendanceChart);
+  mealsChartRef.current      = mealsChart;
+  attendanceChartRef.current = attendanceChart;
 
-  // Re-fetch charts when mealRange changes (org switching is handled in header)
+  // Initial load — summary & activity only. Meals/attendance for the default
+  // 7-day range are owned entirely by the chart effect below (it also runs
+  // on mount), so fetching them here too just duplicates the request.
   useEffect(() => {
-    const days    = RANGE_TO_DAYS[mealRange];
-    const f       = makeFilters(days, activeOrgId);
-    const key     = superCacheKey(f);
-    if (!mealsChart[key])      dispatch(fetchSuperMealsChart(f));
-    if (!attendanceChart[key]) dispatch(fetchSuperAttendanceChart(f));
-  }, [mealRange, activeOrgId, dispatch, mealsChart, attendanceChart]);
+    const filters7 = makeFilters(7, activeOrgId);
+    dispatch(fetchSuperAnalyticsSummary(filters7));
+    dispatch(fetchSuperRecentActivity({ limit: 50, orgId: activeOrgId }));
+  }, [dispatch, activeOrgId]);
+
+  // Fetch meals/attendance whenever the range or org actually changes.
+  // Cache lookups go through refs (not reactive), so a fetch fulfilling and
+  // updating the cache does NOT re-trigger this effect.
+  useEffect(() => {
+    const days = RANGE_TO_DAYS[mealRange];
+    const f    = makeFilters(days, activeOrgId);
+    const key  = superCacheKey(f);
+    if (!mealsChartRef.current[key])      dispatch(fetchSuperMealsChart(f));
+    if (!attendanceChartRef.current[key]) dispatch(fetchSuperAttendanceChart(f));
+  }, [mealRange, activeOrgId, dispatch]);
 
   // Close filter dropdown on outside click
   useEffect(() => {

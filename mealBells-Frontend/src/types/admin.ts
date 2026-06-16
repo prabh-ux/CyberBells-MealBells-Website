@@ -45,7 +45,8 @@ export interface MenuItem {
   vendor:         string;
   vendorId?:      string;
   description:    string;
-  ingredients?:   string;   // ← add this
+  ingredients?:   string;   
+  
   dishType:       DietType;
   image:          string;
   imagePreview?:  string;
