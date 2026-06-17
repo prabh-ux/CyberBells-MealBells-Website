@@ -85,12 +85,13 @@ const AnalyticsDashboardAttendanceChart = ({ attendanceData, loading }: Props) =
         <div style={{ height: 180 }} className="sm:!h-[220px] focus:outline-none">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={attendanceData} barCategoryGap="20%" stackOffset="none">
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#9CA3AF", fontSize: 10, fontWeight: 500 }}
-              />
+            <XAxis
+  dataKey="day"
+  axisLine={false}
+  tickLine={false}
+  interval={attendanceData.length > 14 ? Math.ceil(attendanceData.length / 8) - 1 : 0}
+  tick={{ fill: "#9CA3AF", fontSize: 10, fontWeight: 500 }}
+/>
               <Tooltip
                 content={<AttendanceTooltipContent />}
                 cursor={{ fill: "rgba(255,122,0,0.05)" }}

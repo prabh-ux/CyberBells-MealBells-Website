@@ -2,17 +2,9 @@
 import mongoose               from "mongoose";
 import { organizationModel }  from "../../Models/organization.js";
 import { userModel }          from "../../Models/user.js";
+import { platformSettingsModel } from "../../Models/platformSettings.js";
 
 // ── GET /super-admin/organizations ───────────────────────────────────────────
-/**
- * Query params:
- *   search   — string (searches companyName, contactEmail)
- *   status   — "active" | "inactive" | "all"  (default "all")
- *   page     — number (default 1)
- *   limit    — number (default 20)
- *   sortBy   — "name" | "users" | "createdAt"  (default "createdAt")
- *   sortDir  — "asc" | "desc"  (default "desc")
- */
 export const getSuperOrganizations = async (req, res) => {
   try {
     const {
@@ -24,7 +16,6 @@ export const getSuperOrganizations = async (req, res) => {
       sortDir  = "desc",
     } = req.query;
 
-    // ── Build filter ──────────────────────────────────────────────────────────
     const filter = {};
 
     if (search.trim()) {
@@ -38,12 +29,10 @@ export const getSuperOrganizations = async (req, res) => {
     if (status === "active")   filter.status = true;
     if (status === "inactive") filter.status = false;
 
-    // ── Sort ──────────────────────────────────────────────────────────────────
     const SORT_MAP = { name: "companyName", users: "capacity", createdAt: "createdAt" };
     const sortField = SORT_MAP[sortBy] ?? "createdAt";
     const sort = { [sortField]: sortDir === "asc" ? 1 : -1 };
 
-    // ── Paginate ──────────────────────────────────────────────────────────────
     const pageNum  = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
     const skip     = (pageNum - 1) * limitNum;
@@ -59,7 +48,6 @@ export const getSuperOrganizations = async (req, res) => {
       organizationModel.countDocuments(filter),
     ]);
 
-    // ── Attach user counts per org ────────────────────────────────────────────
     const orgIds = orgs.map(o => o._id);
 
     const userCounts = await userModel.aggregate([
@@ -76,7 +64,6 @@ export const getSuperOrganizations = async (req, res) => {
       userCount: countMap[org._id.toString()] ?? 0,
     }));
 
-    // ── Summary counts (always over full collection, ignore pagination) ───────
     const [activeCount, inactiveCount] = await Promise.all([
       organizationModel.countDocuments({ status: true }),
       organizationModel.countDocuments({ status: false }),
@@ -93,7 +80,7 @@ export const getSuperOrganizations = async (req, res) => {
           totalPages: Math.ceil(total / limitNum),
         },
         summary: {
-          total:    total,
+          total,
           active:   activeCount,
           inactive: inactiveCount,
         },
@@ -147,14 +134,21 @@ export const createSuperOrganization = async (req, res) => {
     if (exists)
       return res.status(409).json({ success: false, msg: "An organization with this email already exists." });
 
+    // Pull platform defaults — fall back to schema defaults if no settings doc yet
+    const platformSettings = await platformSettingsModel.findOne().lean();
+
     const org = await organizationModel.create({
       companyName:       companyName.trim(),
       contactEmail:      contactEmail.toLowerCase().trim(),
       officeAddress:     officeAddress?.trim() ?? "",
-      mealTime:          mealTime   ?? "12:30",
-      cutoffTime:        cutoffTime ?? "09:00",
-      allowDishRequests: allowDishRequests !== undefined ? Boolean(allowDishRequests) : true,
-      capacity:          capacity ? Number(capacity) : 0,
+      mealTime:          mealTime          ?? platformSettings?.defaultMealTime          ?? "12:30",
+      cutoffTime:        cutoffTime        ?? platformSettings?.defaultCutoffTime        ?? "09:00",
+      allowDishRequests: allowDishRequests !== undefined
+                           ? Boolean(allowDishRequests)
+                           : (platformSettings?.defaultAllowDishRequests ?? true),
+      capacity:          capacity !== undefined
+                           ? Number(capacity)
+                           : (platformSettings?.defaultCapacity ?? 50),
       status:            status !== undefined ? Boolean(status) : true,
       createdBy:         req.user._id,
     });
@@ -181,14 +175,14 @@ export const updateSuperOrganization = async (req, res) => {
     const org = await organizationModel.findById(id);
     if (!org) return res.status(404).json({ success: false, msg: "Organization not found." });
 
-    if (companyName)            org.companyName       = companyName.trim();
-    if (contactEmail)           org.contactEmail      = contactEmail.toLowerCase().trim();
-    if (officeAddress !== undefined) org.officeAddress = officeAddress?.trim() ?? "";
-    if (mealTime)               org.mealTime          = mealTime;
-    if (cutoffTime)             org.cutoffTime        = cutoffTime;
+    if (companyName)                 org.companyName       = companyName.trim();
+    if (contactEmail)                org.contactEmail      = contactEmail.toLowerCase().trim();
+    if (officeAddress !== undefined) org.officeAddress     = officeAddress?.trim() ?? "";
+    if (mealTime)                    org.mealTime          = mealTime;
+    if (cutoffTime)                  org.cutoffTime        = cutoffTime;
     if (allowDishRequests !== undefined) org.allowDishRequests = Boolean(allowDishRequests);
-    if (capacity !== undefined) org.capacity          = Number(capacity);
-    if (status !== undefined)   org.status            = Boolean(status);
+    if (capacity !== undefined)      org.capacity          = Number(capacity);
+    if (status !== undefined)        org.status            = Boolean(status);
 
     await org.save();
 

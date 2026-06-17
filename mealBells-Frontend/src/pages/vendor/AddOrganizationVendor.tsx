@@ -7,17 +7,60 @@ import {
   clearNewOrgCredentials,
   clearCreateError,
 } from "../../slices/organizationSlice";
+import {
+  fetchSuperAdminSettings,
+} from "../../slices/superAdmin/superAdminSettingsSlice";
 import toast from "react-hot-toast";
 import {
-  Building2, Mail, Phone, MapPin, Clock,
+  Building2, Mail, Phone, MapPin,
   User, Save, CheckCircle, Loader2, Copy,
-  Eye, EyeOff, ArrowRight, UtensilsCrossed, Users,
+  Eye, EyeOff, ArrowRight, UtensilsCrossed, Users, Clock,
 } from "lucide-react";
+import TimeDropdown, {
+  type TimeValue,
+  EMPTY_TIME,
+  timeToMins,
+} from "../../components/shared/Timedropdown";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Convert a "HH:MM" 24-hour string (from backend/settings) to a TimeValue.
+ * Returns EMPTY_TIME if the string is missing or malformed.
+ */
+function hhmm24ToTimeValue(hhmm: string | undefined | null): TimeValue {
+  if (!hhmm) return EMPTY_TIME;
+  const [hStr, mStr] = hhmm.split(":");
+  const h24 = parseInt(hStr, 10);
+  const m   = parseInt(mStr, 10);
+  if (isNaN(h24) || isNaN(m)) return EMPTY_TIME;
+
+  const p  = h24 >= 12 ? "PM" : "AM";
+  const h  = h24 % 12 === 0 ? 12 : h24 % 12;
+  return { h: String(h), m: String(m), p };
+}
+
+/**
+ * Convert a TimeValue back to "HH:MM" 24-hour string for the API.
+ * Returns "" if the value is empty/incomplete.
+ */
+function timeValueTo24(tv: TimeValue): string {
+  if (!tv.h || tv.m === "" || !tv.p) return "";
+  let h = parseInt(tv.h, 10) % 12;
+  if (tv.p === "PM") h += 12;
+  return `${String(h).padStart(2, "0")}:${String(tv.m).padStart(2, "0")}`;
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type ErrorFields = Partial<Record<
-  "companyName" | "contactEmail" | "officeAddress" | "mealTime" |
-  "cutoffTime"  | "capacity"    | "adminName"      | "adminEmail" | "adminPhone", string
+  | "companyName" | "contactEmail" | "officeAddress"
+  | "mealTime"   | "cutoffTime"   | "capacity"
+  | "adminName"  | "adminEmail"   | "adminPhone",
+  string
 >>;
+
+// ── Shared Field wrapper ──────────────────────────────────────────────────────
 
 const Field = ({
   label, required, error, icon: Icon, children,
@@ -41,9 +84,14 @@ const Field = ({
   </div>
 );
 
-const inputCls = "w-full ml-2.5 sm:ml-3 outline-none text-sm bg-transparent text-gray-700 placeholder:text-gray-400";
+const inputCls =
+  "w-full ml-2.5 sm:ml-3 outline-none text-sm bg-transparent text-gray-700 placeholder:text-gray-400";
 
-function CredentialsModal({ orgName, adminName, adminEmail, adminPassword, onDone }: {
+// ── Credentials Modal ─────────────────────────────────────────────────────────
+
+function CredentialsModal({
+  orgName, adminName, adminEmail, adminPassword, onDone,
+}: {
   orgName: string; adminName: string; adminEmail: string;
   adminPassword: string; onDone: () => void;
 }) {
@@ -75,6 +123,7 @@ function CredentialsModal({ orgName, adminName, adminEmail, adminPassword, onDon
         </div>
 
         <div className="space-y-3 mb-5 sm:mb-6">
+          {/* Email */}
           <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 sm:px-4 py-3 flex items-center justify-between gap-2 sm:gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Admin Email</p>
@@ -88,6 +137,7 @@ function CredentialsModal({ orgName, adminName, adminEmail, adminPassword, onDon
             </button>
           </div>
 
+          {/* Password */}
           <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 sm:px-4 py-3 flex items-center justify-between gap-2 sm:gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-0.5">Temp Password</p>
@@ -137,6 +187,8 @@ function CredentialsModal({ orgName, adminName, adminEmail, adminPassword, onDon
   );
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function AddOrganization() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -144,24 +196,74 @@ export default function AddOrganization() {
   const { creating, createError, newOrgCredentials } =
     useSelector((s: RootState) => s.organization);
 
-  const [fieldErrors, setFieldErrors] = useState<ErrorFields>({});
+  // `fetched` is true only after the real API response arrives (fulfilled or
+  // rejected). It is never true on the initial render with SETTINGS_DEFAULT,
+  // so stale/hardcoded defaults can never fire before real DB data is loaded.
+  const { settings, fetched: settingsFetched } =
+    useSelector((s: RootState) => s.superAdminSettings);
+
+  const [fieldErrors,       setFieldErrors]      = useState<ErrorFields>({});
   const [allowDishRequests, setAllowDishRequests] = useState(true);
 
+  // ── Text fields ──────────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     companyName:   "",
     contactEmail:  "",
     officeAddress: "",
-    mealTime:      "",
-    cutoffTime:    "",
     capacity:      "",
     adminName:     "",
     adminEmail:    "",
     adminPhone:    "",
   });
 
-  const set      = useCallback((k: string, v: string) => setForm(f => ({ ...f, [k]: v })), []);
-  const clearErr = (f: keyof ErrorFields) => setFieldErrors(p => { const n = { ...p }; delete n[f]; return n; });
+  // ── Time fields (TimeValue objects) ─────────────────────────────────────────
+  const [mealTime,   setMealTime]   = useState<TimeValue>(EMPTY_TIME);
+  const [cutoffTime, setCutoffTime] = useState<TimeValue>(EMPTY_TIME);
 
+  // ── Fetch platform defaults on mount ─────────────────────────────────────────
+  useEffect(() => {
+    dispatch(fetchSuperAdminSettings());
+  }, [dispatch]);
+
+  // ── Populate defaults once after real DB response arrives ─────────────────────
+  // Runs on mount (empty dep array) — by that time either:
+  //   (a) settingsFetched is already true (user visited another page before) → apply immediately
+  //   (b) settingsFetched is false → wait for the fetch dispatched above to complete
+  // The second useEffect below handles case (b).
+  useEffect(() => {
+    if (!settingsFetched || !settings?.defaults) return;
+    setMealTime(hhmm24ToTimeValue(settings.defaults.defaultMealTime));
+    setCutoffTime(hhmm24ToTimeValue(settings.defaults.defaultCutoffTime));
+    setForm(f => ({
+      ...f,
+      capacity: settings.defaults.defaultCapacity > 0
+        ? String(settings.defaults.defaultCapacity)
+        : "",
+    }));
+    setAllowDishRequests(settings.defaults.defaultAllowDishRequests ?? true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ← on mount only; handles case (a) where Redux already has data
+
+  // Case (b): fetch completes after mount — settingsFetched flips true
+  useEffect(() => {
+    if (!settingsFetched || !settings?.defaults) return;
+    setMealTime(hhmm24ToTimeValue(settings.defaults.defaultMealTime));
+    setCutoffTime(hhmm24ToTimeValue(settings.defaults.defaultCutoffTime));
+    setForm(f => ({
+      ...f,
+      capacity: settings.defaults.defaultCapacity > 0
+        ? String(settings.defaults.defaultCapacity)
+        : "",
+    }));
+    setAllowDishRequests(settings.defaults.defaultAllowDishRequests ?? true);
+  }, [settingsFetched]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Field helpers ─────────────────────────────────────────────────────────────
+  const set      = useCallback((k: string, v: string) => setForm(f => ({ ...f, [k]: v })), []);
+  const clearErr = (f: keyof ErrorFields) =>
+    setFieldErrors(p => { const n = { ...p }; delete n[f]; return n; });
+
+  // ── Error toast on create failure ─────────────────────────────────────────────
   const prevCreating = useRef(false);
   useEffect(() => {
     if (prevCreating.current && !creating && createError) {
@@ -171,13 +273,19 @@ export default function AddOrganization() {
     prevCreating.current = creating;
   }, [creating, createError, dispatch]);
 
+  // ── Modal done ────────────────────────────────────────────────────────────────
   const handleModalDone = () => {
     dispatch(clearNewOrgCredentials());
     navigate("/vendor/organizations");
   };
 
+  // ── Validation & submit ───────────────────────────────────────────────────────
   const handleSave = () => {
     if (creating) return;
+
+    const mealTime24   = timeValueTo24(mealTime);
+    const cutoffTime24 = timeValueTo24(cutoffTime);
+
     const errs: ErrorFields = {};
 
     if (!form.companyName.trim())   errs.companyName   = "Company name is required";
@@ -185,9 +293,9 @@ export default function AddOrganization() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim()))
       errs.contactEmail = "Enter a valid email";
     if (!form.officeAddress.trim()) errs.officeAddress = "Office address is required";
-    if (!form.mealTime.trim())      errs.mealTime      = "Meal time is required";
-    if (!form.cutoffTime.trim())    errs.cutoffTime    = "Cutoff time is required";
-    else if (form.mealTime && form.cutoffTime >= form.mealTime)
+    if (!mealTime24)                errs.mealTime      = "Meal time is required";
+    if (!cutoffTime24)              errs.cutoffTime    = "Cutoff time is required";
+    else if (mealTime24 && timeToMins(cutoffTime) >= timeToMins(mealTime))
       errs.cutoffTime = "Cutoff must be before meal time";
     if (!form.capacity || Number(form.capacity) <= 0)
       errs.capacity = "Capacity must be greater than 0";
@@ -207,8 +315,8 @@ export default function AddOrganization() {
       companyName:       form.companyName.trim(),
       contactEmail:      form.contactEmail.trim(),
       officeAddress:     form.officeAddress.trim(),
-      mealTime:          form.mealTime,
-      cutoffTime:        form.cutoffTime,
+      mealTime:          mealTime24,
+      cutoffTime:        cutoffTime24,
       capacity:          Number(form.capacity),
       allowDishRequests,
       adminName:         form.adminName.trim(),
@@ -221,12 +329,13 @@ export default function AddOrganization() {
     form.companyName.trim()   &&
     form.contactEmail.trim()  &&
     form.officeAddress.trim() &&
-    form.mealTime             &&
-    form.cutoffTime           &&
+    mealTime.h                &&
+    cutoffTime.h              &&
     form.capacity             &&
     form.adminName.trim()     &&
     form.adminEmail.trim();
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f7f7f7] p-3 sm:p-6 lg:p-8">
 
@@ -240,6 +349,7 @@ export default function AddOrganization() {
         />
       )}
 
+      {/* Breadcrumb + title */}
       <div className="mb-6 sm:mb-8">
         <div className="flex items-center gap-2 mb-2">
           <span
@@ -259,6 +369,7 @@ export default function AddOrganization() {
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 lg:p-8 shadow-sm mb-6 sm:mb-8 space-y-8">
 
+        {/* ── Organization Details ── */}
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-5">
             Organization Details
@@ -291,21 +402,33 @@ export default function AddOrganization() {
               </Field>
             </div>
 
-            <Field label="Meal Time" required error={fieldErrors.mealTime} icon={UtensilsCrossed}>
-              <input
-                type="time" value={form.mealTime}
-                onChange={e => { set("mealTime", e.target.value); clearErr("mealTime"); }}
-                className={inputCls}
+            {/* ── Meal Time (custom picker) ── */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                <UtensilsCrossed size={12} />
+                Meal Time <span className="text-red-400 ml-0.5">*</span>
+              </label>
+              <TimeDropdown
+                value={mealTime}
+                onChange={v => { setMealTime(v); clearErr("mealTime"); }}
+                placeholder="Select meal time"
+                error={fieldErrors.mealTime}
               />
-            </Field>
+            </div>
 
-            <Field label="Attendance Cutoff" required error={fieldErrors.cutoffTime} icon={Clock}>
-              <input
-                type="time" value={form.cutoffTime}
-                onChange={e => { set("cutoffTime", e.target.value); clearErr("cutoffTime"); }}
-                className={inputCls}
+            {/* ── Attendance Cutoff (custom picker) ── */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                <Clock size={12} />
+                Attendance Cutoff <span className="text-red-400 ml-0.5">*</span>
+              </label>
+              <TimeDropdown
+                value={cutoffTime}
+                onChange={v => { setCutoffTime(v); clearErr("cutoffTime"); }}
+                placeholder="Select cutoff time"
+                error={fieldErrors.cutoffTime}
               />
-            </Field>
+            </div>
 
             <Field label="Daily Capacity" required error={fieldErrors.capacity} icon={Users}>
               <input
@@ -317,6 +440,7 @@ export default function AddOrganization() {
 
           </div>
 
+          {/* Allow dish requests toggle */}
           <div className="mt-5 border border-gray-200 rounded-xl px-4 h-12 flex items-center justify-between bg-gray-50">
             <span className="text-sm text-gray-600">
               Allow dish requests:{" "}
@@ -338,6 +462,7 @@ export default function AddOrganization() {
 
         <div className="border-t border-gray-100" />
 
+        {/* ── Admin Account ── */}
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-1">
             Admin Account
@@ -376,6 +501,7 @@ export default function AddOrganization() {
 
         <p className="text-xs text-gray-400"><span className="text-red-400">*</span> Required fields</p>
 
+        {/* Footer actions */}
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 border-t border-gray-100 pt-6">
           <button
             type="button" onClick={() => navigate("/vendor/organizations")} disabled={creating}
@@ -399,6 +525,7 @@ export default function AddOrganization() {
         </div>
       </div>
 
+      {/* Info cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pb-6 sm:pb-8">
         {[
           { icon: CheckCircle, title: "Instant Admin Access",  desc: "Admin credentials are generated and ready to share immediately.",   bg: "bg-blue-50",    iconBg: "bg-blue-100",    color: "text-blue-600",    titleColor: "text-blue-900" },

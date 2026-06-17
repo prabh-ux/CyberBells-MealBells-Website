@@ -7,58 +7,40 @@ import {
 }                                      from "../../slices/superAdmin/superAdminSettingsSlice";
 import type {
   PlatformDefaults,
-  PlatformLimits,
   FeatureFlags,
   PlatformMeta,
 }                                      from "../../slices/superAdmin/superAdminSettingsSlice";
 import toast                           from "react-hot-toast";
+import TimeDropdown, {
+  type TimeValue,
+  EMPTY_TIME,
+}                                      from "../../components/shared/Timedropdown";
+import {
+  Building2,
+  ToggleRight,
+  BarChart2,
+  RotateCcw,
+  TriangleAlert,
+}                                      from "lucide-react";
 
-// ─── Icons (inline SVG so no extra asset imports) ─────────────────────────────
+// ─── Time conversion helpers ──────────────────────────────────────────────────
 
-const BuildingIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 22V12h6v10M9 7h1m4 0h1M9 11h1m4 0h1"/>
-  </svg>
-);
-const SlidersIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
-    <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/>
-  </svg>
-);
-const ToggleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="7" width="22" height="10" rx="5"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/>
-  </svg>
-);
-const ChartIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-    <line x1="2" y1="20" x2="22" y2="20"/>
-  </svg>
-);
-const RefreshIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-  </svg>
-);
-const WarningIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-  </svg>
-);
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const to12Hour = (val: string) => {
+function strToTimeValue(val: string): TimeValue {
+  if (!val) return EMPTY_TIME;
   const [hStr, mStr] = val.split(":");
-  const h      = parseInt(hStr, 10);
-  const m      = mStr ?? "00";
-  const period = h >= 12 ? "PM" : "AM";
-  const h12    = h % 12 === 0 ? 12 : h % 12;
-  return `${String(h12).padStart(2, "0")}:${m} ${period}`;
-};
+  const h24 = parseInt(hStr, 10);
+  if (isNaN(h24)) return EMPTY_TIME;
+  const p   = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return { h: String(h12), m: mStr ?? "00", p };
+}
+
+function timeValueToStr({ h, m, p }: TimeValue): string {
+  if (!h || m === "" || !p) return "";
+  let h24 = parseInt(h, 10) % 12;
+  if (p === "PM") h24 += 12;
+  return `${String(h24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -105,13 +87,33 @@ function NumberInput({
 }: {
   value: number; onChange: (v: number) => void; min?: number; suffix?: string;
 }) {
+  const [raw, setRaw] = useState(String(value));
+
+  useEffect(() => { setRaw(String(value)); }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const str = e.target.value;
+    setRaw(str);
+    if (str !== "" && !isNaN(Number(str))) onChange(Number(str));
+  };
+
+  const handleBlur = () => {
+    const n = parseInt(raw, 10);
+    const clamped = isNaN(n) ? min : Math.max(min, n);
+    setRaw(String(clamped));
+    onChange(clamped);
+  };
+
   return (
     <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 focus-within:ring-2 focus-within:ring-orange-300">
       <input
-        type="number"
-        min={min}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={raw}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onFocus={(e) => e.target.select()}
         className="w-full bg-transparent text-sm text-gray-800 focus:outline-none"
       />
       {suffix && <span className="shrink-0 text-xs text-gray-400">{suffix}</span>}
@@ -133,27 +135,39 @@ function StatCard({ label, value }: { label: string; value: number }) {
 export default function SuperAdminSettings() {
   const dispatch = useDispatch<AppDispatch>();
 
+  const { settings, loading, saving, error } = useSelector(
+    (state: RootState) => state.superAdminSettings
+  );
 
-const { settings, loading, saving, error } = useSelector(
-  (state: RootState) => state.superAdminSettings  //
-);
-  // Local form mirrors the 4 editable groups
   const [defaults, setDefaults] = useState<PlatformDefaults>(settings.defaults);
-  const [limits,   setLimits]   = useState<PlatformLimits>(settings.limits);
   const [flags,    setFlags]    = useState<FeatureFlags>(settings.flags);
   const [meta,     setMeta]     = useState<PlatformMeta>(settings.meta);
+
+  const [mealTime,   setMealTime]   = useState<TimeValue>(() => strToTimeValue(settings.defaults.defaultMealTime));
+  const [cutoffTime, setCutoffTime] = useState<TimeValue>(() => strToTimeValue(settings.defaults.defaultCutoffTime));
 
   useEffect(() => { dispatch(fetchSuperAdminSettings()); }, [dispatch]);
 
   useEffect(() => {
     setDefaults(settings.defaults);
-    setLimits(settings.limits);
     setFlags(settings.flags);
     setMeta(settings.meta);
+    setMealTime(strToTimeValue(settings.defaults.defaultMealTime));
+    setCutoffTime(strToTimeValue(settings.defaults.defaultCutoffTime));
   }, [settings]);
 
+  const handleMealTimeChange = (tv: TimeValue) => {
+    setMealTime(tv);
+    setDefaults((p) => ({ ...p, defaultMealTime: timeValueToStr(tv) }));
+  };
+
+  const handleCutoffTimeChange = (tv: TimeValue) => {
+    setCutoffTime(tv);
+    setDefaults((p) => ({ ...p, defaultCutoffTime: timeValueToStr(tv) }));
+  };
+
   const handleSave = async () => {
-    const result = await dispatch(updateSuperAdminSettings({ defaults, limits, flags, meta }));
+    const result = await dispatch(updateSuperAdminSettings({ defaults, flags, meta }));
     if (updateSuperAdminSettings.fulfilled.match(result)) {
       toast.success("Platform settings saved!");
     } else {
@@ -163,9 +177,10 @@ const { settings, loading, saving, error } = useSelector(
 
   const handleReset = () => {
     setDefaults(settings.defaults);
-    setLimits(settings.limits);
     setFlags(settings.flags);
     setMeta(settings.meta);
+    setMealTime(strToTimeValue(settings.defaults.defaultMealTime));
+    setCutoffTime(strToTimeValue(settings.defaults.defaultCutoffTime));
   };
 
   const BILLING_PLANS = [
@@ -204,7 +219,7 @@ const { settings, loading, saving, error } = useSelector(
           {/* ── Platform overview (read-only) ── */}
           <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
             <SectionHeader
-              icon={<ChartIcon />}
+              icon={<BarChart2 size={20} />}
               iconBg="bg-green-100"
               iconColor="text-green-700"
               title="Platform overview"
@@ -241,42 +256,32 @@ const { settings, loading, saving, error } = useSelector(
           {/* ── New organization defaults ── */}
           <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
             <SectionHeader
-              icon={<BuildingIcon />}
+              icon={<Building2 size={20} />}
               iconBg="bg-orange-100"
               iconColor="text-orange-500"
               title="New organization defaults"
               description="Applied when a vendor creates a new org. The org's own admin can override these."
             />
 
-            {/* Times */}
             <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <FieldLabel>Default meal time</FieldLabel>
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 focus-within:ring-2 focus-within:ring-orange-300">
-                  <input
-                    type="time"
-                    value={defaults.defaultMealTime}
-                    onChange={(e) => setDefaults((p) => ({ ...p, defaultMealTime: e.target.value }))}
-                    className="flex-1 bg-transparent text-sm text-gray-800 focus:outline-none"
-                  />
-                  <span className="text-xs text-gray-400 shrink-0">{to12Hour(defaults.defaultMealTime)}</span>
-                </div>
+                <TimeDropdown
+                  value={mealTime}
+                  onChange={handleMealTimeChange}
+                  placeholder="Select meal time"
+                />
               </div>
               <div>
                 <FieldLabel>Default cutoff time</FieldLabel>
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 focus-within:ring-2 focus-within:ring-orange-300">
-                  <input
-                    type="time"
-                    value={defaults.defaultCutoffTime}
-                    onChange={(e) => setDefaults((p) => ({ ...p, defaultCutoffTime: e.target.value }))}
-                    className="flex-1 bg-transparent text-sm text-gray-800 focus:outline-none"
-                  />
-                  <span className="text-xs text-gray-400 shrink-0">{to12Hour(defaults.defaultCutoffTime)}</span>
-                </div>
+                <TimeDropdown
+                  value={cutoffTime}
+                  onChange={handleCutoffTimeChange}
+                  placeholder="Select cutoff time"
+                />
               </div>
             </div>
 
-            {/* Capacity */}
             <div className="mb-5">
               <FieldLabel>Default capacity (seats/day)</FieldLabel>
               <NumberInput
@@ -286,7 +291,6 @@ const { settings, loading, saving, error } = useSelector(
               />
             </div>
 
-            {/* Billing plan pills */}
             <div className="mb-5">
               <FieldLabel>Default billing plan</FieldLabel>
               <div className="mt-1 grid grid-cols-3 gap-2">
@@ -309,7 +313,6 @@ const { settings, loading, saving, error } = useSelector(
               </div>
             </div>
 
-            {/* Allow dish requests toggle */}
             <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-4">
               <div>
                 <p className="text-sm font-medium text-gray-800">Allow dish requests by default</p>
@@ -322,70 +325,19 @@ const { settings, loading, saving, error } = useSelector(
             </div>
           </section>
 
-          {/* ── Platform limits ── */}
-          <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
-            <SectionHeader
-              icon={<SlidersIcon />}
-              iconBg="bg-blue-100"
-              iconColor="text-blue-600"
-              title="Platform limits"
-              description="Hard caps enforced across all organizations — no org or vendor can exceed these."
-            />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <FieldLabel>Max organizations per vendor</FieldLabel>
-                <NumberInput
-                  value={limits.maxOrgsPerVendor}
-                  onChange={(v) => setLimits((p) => ({ ...p, maxOrgsPerVendor: v }))}
-                  min={1}
-                  suffix="orgs"
-                />
-              </div>
-              <div>
-                <FieldLabel>Max members per organization</FieldLabel>
-                <NumberInput
-                  value={limits.maxMembersPerOrg}
-                  onChange={(v) => setLimits((p) => ({ ...p, maxMembersPerOrg: v }))}
-                  min={1}
-                  suffix="members"
-                />
-              </div>
-              <div>
-                <FieldLabel>Max dish requests per day</FieldLabel>
-                <NumberInput
-                  value={limits.maxDishRequestsPerDay}
-                  onChange={(v) => setLimits((p) => ({ ...p, maxDishRequestsPerDay: v }))}
-                  suffix="requests"
-                />
-              </div>
-              <div>
-                <FieldLabel>Attendance lock window</FieldLabel>
-                <NumberInput
-                  value={limits.attendanceLockHours}
-                  onChange={(v) => setLimits((p) => ({ ...p, attendanceLockHours: v }))}
-                  suffix="hrs before meal"
-                />
-                <p className="mt-1 text-[11px] text-gray-400">
-                  Members cannot change attendance within this window
-                </p>
-              </div>
-            </div>
-          </section>
-
           {/* ── Feature flags ── */}
           <section className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
             <SectionHeader
-              icon={<ToggleIcon />}
+              icon={<ToggleRight size={20} />}
               iconBg="bg-purple-100"
               iconColor="text-purple-600"
               title="Feature flags"
               description="Enable or disable features globally — affects every vendor and organization instantly."
             />
 
-            {/* Maintenance mode warning banner */}
             {flags.maintenanceMode && (
               <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                <span className="mt-0.5 shrink-0 text-amber-600"><WarningIcon /></span>
+                <TriangleAlert size={16} className="mt-0.5 shrink-0 text-amber-600" />
                 <div>
                   <p className="text-sm font-medium text-amber-800">Maintenance mode is active</p>
                   <p className="text-xs text-amber-600">All users are currently seeing a maintenance banner. Turn this off when done.</p>
@@ -401,11 +353,8 @@ const { settings, loading, saving, error } = useSelector(
                     <p className="mt-0.5 text-xs text-gray-400">{sub}</p>
                   </div>
                   <div className="ml-4 shrink-0 flex items-center gap-2">
-                    {/* Status pill */}
                     <span className={`hidden sm:inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      flags[key]
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
+                      flags[key] ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                     }`}>
                       {flags[key] ? "On" : "Off"}
                     </span>
@@ -419,7 +368,6 @@ const { settings, loading, saving, error } = useSelector(
             </div>
           </section>
 
-          {/* Global error */}
           {error && (
             <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-500">{error}</p>
           )}
@@ -434,7 +382,7 @@ const { settings, loading, saving, error } = useSelector(
               {saving ? "Saving…" : "Save platform settings"}
             </button>
             <div className="flex items-center justify-center gap-1.5">
-              <span className="text-gray-400"><RefreshIcon /></span>
+              <RotateCcw size={14} className="text-gray-400" />
               <button
                 onClick={handleReset}
                 className="text-sm text-gray-400 hover:text-gray-600 transition-colors"

@@ -74,6 +74,7 @@ import SuperAdminMenuOverview from "./pages/superAdmin/SuperAdminMenuOverview";
 import SuperAdminSettings from "./pages/superAdmin/SuperAdminSettings";
 import SuperAdminProfileSettings from "./pages/superAdmin/SuperAdminProfileSettings";
 import SystemAdminNotifications from "./pages/superAdmin/SystemAdminNotifications";
+import SuperAdminEditVendor from "./pages/superAdmin/SuperAdminEditVendor";
 
 function App() {
   const location = useLocation();
@@ -222,6 +223,8 @@ function App() {
                 path="/super-admin/notifications"
                 element={<SystemAdminNotifications />}
               />
+              <Route path="/super-admin/vendors/:id/edit" element={<SuperAdminEditVendor />} />
+
             </Route>
 
             {/* ── Admin — requires auth + admin type ── */}

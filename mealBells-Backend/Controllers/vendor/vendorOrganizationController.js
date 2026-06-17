@@ -1,8 +1,8 @@
 // Controllers/vendor/vendorOrganizationController.js
-
-import { organizationModel } from "../../Models/organization.js";
-import { userModel }         from "../../Models/user.js";
-import bcrypt                from "bcryptjs";
+import { organizationModel }     from "../../Models/organization.js";
+import { userModel }             from "../../Models/user.js";
+import { platformSettingsModel } from "../../Models/platformSettings.js";
+import bcrypt                    from "bcryptjs";
 
 const generatePassword = () => {
   const raw = Math.random().toString(36).slice(-8) + "1!";
@@ -63,19 +63,24 @@ export const createVendorOrganization = async (req, res) => {
     const existing = await userModel.findOne({ email: adminEmail.toLowerCase().trim() });
     if (existing) return res.status(409).json({ msg: "Admin email is already in use." });
 
-    // Create org
+    // Pull platform defaults — fall back to schema defaults if no settings doc yet
+    const platformSettings = await platformSettingsModel.findOne().lean();
+
     const org = await organizationModel.create({
       companyName:       companyName.trim(),
       contactEmail:      contactEmail.trim(),
       officeAddress:     officeAddress.trim(),
-      mealTime:          mealTime        ?? "12:30",
-      cutoffTime:        cutoffTime      ?? "09:00",
-      allowDishRequests: allowDishRequests ?? true,
-      capacity:          Number(capacity) || 0,
+      mealTime:          mealTime          ?? platformSettings?.defaultMealTime          ?? "12:30",
+      cutoffTime:        cutoffTime        ?? platformSettings?.defaultCutoffTime        ?? "09:00",
+      allowDishRequests: allowDishRequests !== undefined
+                           ? allowDishRequests
+                           : (platformSettings?.defaultAllowDishRequests ?? true),
+      capacity:          capacity !== undefined
+                           ? Number(capacity)
+                           : (platformSettings?.defaultCapacity ?? 50),
       createdBy:         req.user.id,
     });
 
-    // Create admin user linked to org
     const plainPassword = generatePassword();
     const hashed        = await bcrypt.hash(plainPassword, 10);
 
@@ -86,14 +91,13 @@ export const createVendorOrganization = async (req, res) => {
       type:           "admin",
       role:           "System Admin",
       phone:          adminPhone?.trim() ?? "",
-      organizationId: [org._id],   // ← array with single org
+      organizationId: [org._id],
       active:         true,
     });
 
-    // ── Push new org ID into vendor's organizationId array ──
     await userModel.findByIdAndUpdate(
       req.user.id,
-      { $addToSet: { organizationId: org._id } }  // $addToSet prevents duplicates
+      { $addToSet: { organizationId: org._id } }
     );
 
     return res.status(201).json({

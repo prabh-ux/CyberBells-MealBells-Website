@@ -1,27 +1,3 @@
-/**
- * TimeDropdown — reusable time picker
- *
- * Features:
- *  - Type directly into H / M fields (free input, clamped on blur)
- *  - AM / PM toggle buttons
- *  - Full minutes 00–59
- *  - Desktop: dropdown panel under trigger
- *  - Mobile: bottom-sheet with scrim
- *  - Clear button when a value is set
- *
- * Exports:
- *   default   TimeDropdown component
- *   TimeValue { h: string; m: string; p: string }
- *   EMPTY_TIME
- *   fmtTime(v)      → "09:30 AM" | ""
- *   timeToMins(v)   → number | -1
- *
- * Usage:
- *   import TimeDropdown, { TimeValue, EMPTY_TIME } from "@/components/TimeDropdown";
- *   const [t, setT] = useState<TimeValue>(EMPTY_TIME);
- *   <TimeDropdown value={t} onChange={setT} placeholder="Select time" />
- */
-
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Clock, X, ChevronDown } from "lucide-react";
 
@@ -35,12 +11,12 @@ export interface TimeValue {
 export const EMPTY_TIME: TimeValue = { h: "", m: "", p: "" };
 
 export const fmtTime = ({ h, m, p }: TimeValue): string => {
-  if (!h || !m || !p) return "";
+  if (!h || m === "" || !p) return ""; // ← FIX: was !m which treated "0" as falsy
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} ${p}`;
 };
 
 export const timeToMins = ({ h, m, p }: TimeValue): number => {
-  if (!h || !m || !p) return -1;
+  if (!h || m === "" || !p) return -1; // ← FIX: same issue
   return (parseInt(h) % 12 + (p === "PM" ? 12 : 0)) * 60 + parseInt(m);
 };
 
@@ -66,9 +42,7 @@ const TimeDropdown = ({
   className = "",
 }: TimeDropdownProps) => {
   const [open, setOpen]   = useState(false);
-  // draft holds raw strings while editing; committed on confirm/blur
   const [draft, setDraft] = useState<TimeValue>(EMPTY_TIME);
-  // raw display strings for the two inputs (allows partial typing)
   const [rawH, setRawH]   = useState("");
   const [rawM, setRawM]   = useState("");
 
@@ -86,7 +60,6 @@ const TimeDropdown = ({
 
   const closePanel = useCallback(() => setOpen(false), []);
 
-  // Outside-click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) closePanel();
@@ -95,7 +68,6 @@ const TimeDropdown = ({
     return () => document.removeEventListener("mousedown", handler);
   }, [closePanel]);
 
-  // Escape key
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closePanel(); };
@@ -103,7 +75,6 @@ const TimeDropdown = ({
     return () => document.removeEventListener("keydown", handler);
   }, [open, closePanel]);
 
-  // Body scroll lock on mobile
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -113,7 +84,6 @@ const TimeDropdown = ({
   // ── Draft helpers ────────────────────────────────────────────────────────────
   const setP = (p: string) => setDraft((d) => ({ ...d, p }));
 
-  // Clamp hour 1–12 on blur
   const commitH = (raw: string) => {
     const n = parseInt(raw);
     const clamped = isNaN(n) ? "" : String(Math.min(12, Math.max(1, n)));
@@ -121,7 +91,6 @@ const TimeDropdown = ({
     setDraft((d) => ({ ...d, h: clamped }));
   };
 
-  // Clamp minute 0–59 on blur
   const commitM = (raw: string) => {
     const n = parseInt(raw);
     const clamped = isNaN(n) ? "" : String(Math.min(59, Math.max(0, n)));
@@ -129,7 +98,7 @@ const TimeDropdown = ({
     setDraft((d) => ({ ...d, m: clamped }));
   };
 
-  const canConfirm = !!(draft.h && draft.m !== "" && draft.p);
+  const canConfirm = !!(draft.h && draft.m !== "" && draft.p); // ← FIX: was draft.m
 
   const confirm = () => {
     if (!canConfirm) return;
@@ -157,35 +126,32 @@ const TimeDropdown = ({
       : "border-gray-200 bg-gray-50 hover:border-gray-300 cursor-pointer",
   ].join(" ");
 
-  // ── Inner panel (shared desktop + mobile) ────────────────────────────────────
+  // ── Inner panel ──────────────────────────────────────────────────────────────
   const panel = (
     <div className="flex flex-col">
-      {/* Inputs row */}
       <div className="p-4 pb-3">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
           Enter or adjust time
         </p>
 
         <div className="flex items-center gap-2">
-          {/* Hour input */}
+          {/* Hour */}
           <div className="flex flex-col items-center gap-1 flex-1">
             <span className="text-[10px] text-gray-400 font-semibold">Hour</span>
-            <div className="relative w-full">
-              <input
-                type="number" min={1} max={12}
-                value={rawH}
-                onChange={(e) => { setRawH(e.target.value); setDraft((d) => ({ ...d, h: e.target.value })); }}
-                onBlur={(e) => commitH(e.target.value)}
-                onFocus={(e) => e.target.select()}
-                placeholder="12"
-                className="w-full h-12 text-center text-xl font-bold rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-500/10 text-gray-700 transition-all [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
+            <input
+              type="number" min={1} max={12}
+              value={rawH}
+              onChange={(e) => { setRawH(e.target.value); setDraft((d) => ({ ...d, h: e.target.value })); }}
+              onBlur={(e) => commitH(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              placeholder="12"
+              className="w-full h-12 text-center text-xl font-bold rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-500/10 text-gray-700 transition-all [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+            />
           </div>
 
           <span className="text-2xl font-bold text-gray-300 mt-4">:</span>
 
-          {/* Minute input */}
+          {/* Minute */}
           <div className="flex flex-col items-center gap-1 flex-1">
             <span className="text-[10px] text-gray-400 font-semibold">Minute</span>
             <input
@@ -220,7 +186,7 @@ const TimeDropdown = ({
           </div>
         </div>
 
-        {/* Quick-select minute pills */}
+        {/* Quick minutes */}
         <div className="mt-3">
           <p className="text-[10px] text-gray-400 font-semibold mb-1.5">Quick minutes</p>
           <div className="flex gap-1.5 flex-wrap">
@@ -299,7 +265,7 @@ const TimeDropdown = ({
 
       {error && <p className="text-xs text-red-500 font-medium mt-1">{error}</p>}
 
-      {/* ── Desktop dropdown ── */}
+      {/* Desktop dropdown */}
       {open && (
         <>
           <div className="hidden sm:block fixed inset-0 z-40" onClick={closePanel} />
@@ -309,7 +275,7 @@ const TimeDropdown = ({
         </>
       )}
 
-      {/* ── Mobile bottom sheet ── */}
+      {/* Mobile bottom sheet */}
       {open && (
         <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={closePanel} />

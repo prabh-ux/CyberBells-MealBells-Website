@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../app/store";
 import { fetchTodayDelivery, advanceDelivery } from "../../slices/deliverySlice";
 import type { DeliveryStep } from "../../slices/deliverySlice";
-import { Check, Clock, RefreshCw, Loader2, AlertTriangle, Timer } from "lucide-react";
+import { Check, Clock, RefreshCw, Loader2, AlertTriangle, Timer, CalendarX } from "lucide-react";
 
 function parseTimeString(timeStr: string): Date | null {
   const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
@@ -61,6 +61,17 @@ function useWindowStatus(window: { start: Date; end: Date } | null) {
   return { closed, notStarted, countdown };
 }
 
+function isNoDeliveryError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("no dish") ||
+    lower.includes("no delivery") ||
+    lower.includes("not scheduled") ||
+    lower.includes("scheduled for today") ||
+    lower.includes("no order")
+  );
+}
+
 const StepItem: React.FC<{ step: DeliveryStep; isLast: boolean }> = ({ step, isLast }) => (
   <div className="flex items-start gap-4 relative">
     {!isLast && (
@@ -89,6 +100,30 @@ const StepItem: React.FC<{ step: DeliveryStep; isLast: boolean }> = ({ step, isL
   </div>
 );
 
+// ── Empty state (no delivery scheduled) ──────────────────────────────────────
+
+const NoDeliveryState: React.FC<{ onRefresh: () => void }> = ({ onRefresh }) => (
+  <div className="px-6 py-14 flex flex-col items-center text-center gap-4">
+    <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+      <CalendarX className="w-7 h-7 text-gray-300" />
+    </div>
+    <div>
+      <p className="text-sm font-bold text-gray-600">No delivery scheduled today</p>
+      <p className="text-xs text-gray-400 mt-1 max-w-[220px] leading-relaxed">
+        Once a delivery is assigned for today, live progress will appear here.
+      </p>
+    </div>
+    <button
+      onClick={onRefresh}
+      className="flex items-center gap-1.5 text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors mt-1"
+    >
+      <RefreshCw className="w-3.5 h-3.5" /> Refresh
+    </button>
+  </div>
+);
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 const DeliveryStatusVendor: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -96,13 +131,18 @@ const DeliveryStatusVendor: React.FC = () => {
   const { user }        = useSelector((s: RootState) => s.auth);
   const { activeOrgId } = useSelector((s: RootState) => s.vendors);
 
-  const window = parseDeliveryWindow((user as any)?.deliveryTiming);
-  const { closed, notStarted, countdown } = useWindowStatus(window);
+  const deliveryWindow = parseDeliveryWindow((user as any)?.deliveryTiming);
+  const { closed, notStarted, countdown } = useWindowStatus(deliveryWindow);
+
+  const handleRefresh = () => {
+    if (activeOrgId) dispatch(fetchTodayDelivery(activeOrgId));
+  };
 
   useEffect(() => {
     if (activeOrgId) dispatch(fetchTodayDelivery(activeOrgId));
   }, [dispatch, activeOrgId]);
 
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center">
@@ -111,7 +151,30 @@ const DeliveryStatusVendor: React.FC = () => {
     );
   }
 
+  // ── Error ──────────────────────────────────────────────────────────────────
   if (error) {
+    // "No dish scheduled" is not a real error — render the full page with empty state
+    if (isNoDeliveryError(error)) {
+      return (
+        <div className="min-h-screen bg-[#F7F6F3] p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Delivery Status</h1>
+              <p className="text-sm text-gray-400 mt-1">Manage today's delivery progress</p>
+            </div>
+            <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-50">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Live Progress</p>
+                <p className="text-lg font-bold text-gray-900 mt-0.5">Today's Order</p>
+              </div>
+              <NoDeliveryState onRefresh={handleRefresh} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Genuine error
     return (
       <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center p-4">
         <div className="bg-white rounded-[24px] p-8 text-center shadow-sm border border-gray-100 max-w-sm w-full">
@@ -121,7 +184,7 @@ const DeliveryStatusVendor: React.FC = () => {
           <p className="text-sm font-semibold text-gray-700 mb-1">Could not load delivery</p>
           <p className="text-xs text-gray-400 mb-4">{error}</p>
           <button
-            onClick={() => activeOrgId && dispatch(fetchTodayDelivery(activeOrgId))}
+            onClick={handleRefresh}
             className="text-sm font-bold text-orange-500 hover:text-orange-600 transition-colors"
           >
             Try Again
@@ -131,14 +194,16 @@ const DeliveryStatusVendor: React.FC = () => {
     );
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
   const getWindowBadge = () => {
-    if (!window) return null;
-    if (closed)     return { color: "bg-red-100 text-red-600",    text: "Window Closed"   };
-    if (notStarted) return { color: "bg-blue-100 text-blue-600",  text: "Not Started Yet" };
-    return                  { color: "bg-green-100 text-green-600", text: "Window Open"   };
+    if (!deliveryWindow) return null;
+    if (closed)     return { color: "bg-red-100 text-red-600",     text: "Window Closed"   };
+    if (notStarted) return { color: "bg-blue-100 text-blue-600",   text: "Not Started Yet" };
+    return                  { color: "bg-green-100 text-green-600", text: "Window Open"    };
   };
   const badge = getWindowBadge();
 
+  // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#F7F6F3] p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -155,14 +220,14 @@ const DeliveryStatusVendor: React.FC = () => {
             <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-4">Delivery Window</p>
 
-              {window ? (
+              {deliveryWindow ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
                       <Clock className="w-5 h-5 text-orange-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-800">{window.label}</p>
+                      <p className="text-sm font-bold text-gray-800">{deliveryWindow.label}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Today's window</p>
                     </div>
                   </div>
@@ -181,7 +246,6 @@ const DeliveryStatusVendor: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Window closed — informational only, does NOT block the button */}
                   {closed && (
                     <div className="flex gap-2.5 p-3 bg-orange-50 rounded-2xl border border-orange-100">
                       <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
@@ -196,7 +260,7 @@ const DeliveryStatusVendor: React.FC = () => {
                       <Clock className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                       <p className="text-xs text-blue-700 leading-relaxed font-medium">
                         Delivery window hasn't started yet. Updates will be enabled at{" "}
-                        {window.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}.
+                        {deliveryWindow.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}.
                       </p>
                     </div>
                   )}
@@ -265,12 +329,9 @@ const DeliveryStatusVendor: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="px-6 py-12 text-center">
-                  <p className="text-sm text-gray-400">No delivery data for today.</p>
-                </div>
+                <NoDeliveryState onRefresh={handleRefresh} />
               )}
 
-              {/* Action button — only blocked when already completed, never by time window */}
               <div className="px-6 pb-6">
                 {delivery?.isCompleted ? (
                   <div className="w-full py-3.5 bg-green-50 border border-green-200 text-green-600 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm">

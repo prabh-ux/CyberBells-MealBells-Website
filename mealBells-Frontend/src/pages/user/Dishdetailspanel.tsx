@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   ArrowLeft, Star, Flame, CheckCircle2, XCircle, CalendarDays,
-  Pencil, Leaf, Drumstick, Salad, Check, X, Package,
+  Pencil, Leaf, Drumstick, Salad, Check, X, Package, Lock,
 } from "lucide-react";
 import type { AppDispatch, RootState } from "../../app/store";
 import { fetchDishDetails, patchDishAttendance, resetDishDetails } from "../../slices/userSlice";
@@ -22,8 +22,15 @@ export default function DishDetailsPanel() {
     return () => { dispatch(resetDishDetails()); };
   }, [scheduleId, dispatch]);
 
+  const isPast = (iso: string) => {
+    const d = new Date(iso);
+    const today = new Date();
+    return d.toDateString() !== today.toDateString() && d < today;
+  };
+
   const handleAttendance = () => {
     if (!data || voting) return;
+    if (data.scheduledDate && isPast(data.scheduledDate)) return;
     const next = data.myAttendance === "yes" ? "no" : "yes";
     dispatch(patchDishAttendance({ scheduleId: data.scheduleId, response: next }));
   };
@@ -46,12 +53,13 @@ export default function DishDetailsPanel() {
     </div>
   );
 
-  const { dish, myAttendance, hasReviewed } = data;
+  const { dish, myAttendance, hasReviewed, scheduledDate } = data;
   const attended = myAttendance === "yes";
   const skipped  = myAttendance === "no";
+  const pastDay  = scheduledDate ? isPast(scheduledDate) : false;
 
   const btnBase  = "w-full py-3.5 rounded-2xl text-white text-[14px] font-semibold flex items-center justify-center gap-2 transition-opacity active:opacity-80 disabled:opacity-50";
-  const btnColor = attended ? "bg-green-500" : skipped ? "bg-red-500" : "bg-orange-500";
+  const btnColor = pastDay ? "bg-gray-300" : attended ? "bg-green-500" : skipped ? "bg-red-500" : "bg-orange-500";
 
   const vegBadge = dish.dishType === "Veg"
     ? "bg-green-500 text-white"
@@ -163,19 +171,30 @@ export default function DishDetailsPanel() {
             <div className="space-y-2.5 pt-0.5">
               <button
                 onClick={handleAttendance}
-                disabled={voting}
+                disabled={voting || pastDay}
                 className={`${btnBase} ${btnColor}`}
               >
-                {attended
-                  ? <CheckCircle2 size={15} strokeWidth={2} />
-                  : skipped
-                  ? <XCircle size={15} strokeWidth={2} />
-                  : <CalendarDays size={15} strokeWidth={2} />}
-                {attended
-                  ? "Attending this Day"
-                  : skipped
-                  ? "Skipping — tap to undo"
-                  : "Mark Attendance for this Day"}
+                {pastDay ? (
+                  <>
+                    <Lock size={15} strokeWidth={2} />
+                    Attendance Closed
+                  </>
+                ) : attended ? (
+                  <>
+                    <CheckCircle2 size={15} strokeWidth={2} />
+                    Attending this Day
+                  </>
+                ) : skipped ? (
+                  <>
+                    <XCircle size={15} strokeWidth={2} />
+                    Skipping — tap to undo
+                  </>
+                ) : (
+                  <>
+                    <CalendarDays size={15} strokeWidth={2} />
+                    Mark Attendance for this Day
+                  </>
+                )}
               </button>
 
               <button

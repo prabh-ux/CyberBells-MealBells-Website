@@ -7,16 +7,48 @@ import {
   createSuperOrganization,
   fetchSuperOrganizations,
 } from "../../slices/superAdmin/superAdminOrganizationSlice";
+import {
+  fetchSuperAdminSettings,
+} from "../../slices/superAdmin/superAdminSettingsSlice";
 import toast from "react-hot-toast";
 import {
   Building2, Mail, MapPin, Clock, Users,
   Save, Loader2, UtensilsCrossed, CheckCircle,
 } from "lucide-react";
+import TimeDropdown, {
+  type TimeValue,
+  EMPTY_TIME,
+  timeToMins,
+} from "../../components/shared/Timedropdown";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function hhmm24ToTimeValue(hhmm: string | undefined | null): TimeValue {
+  if (!hhmm) return EMPTY_TIME;
+  const [hStr, mStr] = hhmm.split(":");
+  const h24 = parseInt(hStr, 10);
+  const m   = parseInt(mStr, 10);
+  if (isNaN(h24) || isNaN(m)) return EMPTY_TIME;
+  const p = h24 >= 12 ? "PM" : "AM";
+  const h = h24 % 12 === 0 ? 12 : h24 % 12;
+  return { h: String(h), m: String(m), p };
+}
+
+function timeValueTo24(tv: TimeValue): string {
+  if (!tv.h || tv.m === "" || !tv.p) return "";
+  let h = parseInt(tv.h, 10) % 12;
+  if (tv.p === "PM") h += 12;
+  return `${String(h).padStart(2, "0")}:${String(tv.m).padStart(2, "0")}`;
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type ErrorFields = Partial<Record<
   "companyName" | "contactEmail" | "officeAddress" |
   "mealTime"    | "cutoffTime"   | "capacity", string
 >>;
+
+// ── Field wrapper ─────────────────────────────────────────────────────────────
 
 const Field = ({ label, required, error, icon: Icon, children }: {
   label: string; required?: boolean; error?: string;
@@ -40,45 +72,88 @@ const Field = ({ label, required, error, icon: Icon, children }: {
 
 const inputCls = "w-full ml-2.5 sm:ml-3 outline-none text-sm bg-transparent text-gray-700 placeholder:text-gray-400";
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function SuperAdminCreateOrganization() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
   const { creating, createError, filters } = useSelector((s: RootState) => s.superOrgs);
 
-  const [fieldErrors,        setFieldErrors]        = useState<ErrorFields>({});
-  const [allowDishRequests,  setAllowDishRequests]  = useState(true);
-  const [status,             setStatus]             = useState(true);
+  const { settings, fetched: settingsFetched } =
+    useSelector((s: RootState) => s.superAdminSettings);
+
+  const [fieldErrors,       setFieldErrors]      = useState<ErrorFields>({});
+  const [allowDishRequests, setAllowDishRequests] = useState(true);
+  const [status,            setStatus]            = useState(true);
 
   const [form, setForm] = useState({
     companyName:   "",
     contactEmail:  "",
     officeAddress: "",
-    mealTime:      "12:30",
-    cutoffTime:    "09:00",
     capacity:      "",
   });
 
+  const [mealTime,   setMealTime]   = useState<TimeValue>(EMPTY_TIME);
+  const [cutoffTime, setCutoffTime] = useState<TimeValue>(EMPTY_TIME);
+
+  // ── Fetch on mount ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    dispatch(fetchSuperAdminSettings());
+  }, [dispatch]);
+
+  // ── Apply defaults helper ─────────────────────────────────────────────────────
+  const applyDefaults = useCallback((s: typeof settings) => {
+    if (!s?.defaults) return;
+    setMealTime(hhmm24ToTimeValue(s.defaults.defaultMealTime));
+    setCutoffTime(hhmm24ToTimeValue(s.defaults.defaultCutoffTime));
+    setForm(f => ({
+      ...f,
+      capacity: s.defaults.defaultCapacity > 0 ? String(s.defaults.defaultCapacity) : "",
+    }));
+    setAllowDishRequests(s.defaults.defaultAllowDishRequests ?? true);
+  }, []);
+
+  // Case (a): Redux already has data when component mounts (user navigated here before)
+  useEffect(() => {
+    if (settingsFetched) applyDefaults(settings);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Case (b): fetch completes after mount
+  useEffect(() => {
+    if (settingsFetched) applyDefaults(settings);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsFetched]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
   const set      = useCallback((k: string, v: string) => setForm(f => ({ ...f, [k]: v })), []);
   const clearErr = (f: keyof ErrorFields) =>
     setFieldErrors(p => { const n = { ...p }; delete n[f]; return n; });
 
+  // ── Create error toast ────────────────────────────────────────────────────────
   const prevCreating = useRef(false);
   useEffect(() => {
     if (prevCreating.current && !creating && createError) toast.error(createError);
     prevCreating.current = creating;
   }, [creating, createError]);
 
+  // ── Ready check ───────────────────────────────────────────────────────────────
   const isReady =
-    form.companyName.trim()  &&
-    form.contactEmail.trim() &&
-    form.officeAddress.trim()&&
-    form.mealTime            &&
-    form.cutoffTime          &&
+    form.companyName.trim()   &&
+    form.contactEmail.trim()  &&
+    form.officeAddress.trim() &&
+    mealTime.h                &&
+    cutoffTime.h              &&
     form.capacity;
 
+  // ── Submit ────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (creating) return;
+
+    const mealTime24   = timeValueTo24(mealTime);
+    const cutoffTime24 = timeValueTo24(cutoffTime);
+
     const errs: ErrorFields = {};
 
     if (!form.companyName.trim())   errs.companyName   = "Company name is required";
@@ -86,9 +161,9 @@ export default function SuperAdminCreateOrganization() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim()))
       errs.contactEmail = "Enter a valid email";
     if (!form.officeAddress.trim()) errs.officeAddress = "Office address is required";
-    if (!form.mealTime)             errs.mealTime      = "Meal time is required";
-    if (!form.cutoffTime)           errs.cutoffTime    = "Cutoff time is required";
-    else if (form.cutoffTime >= form.mealTime)
+    if (!mealTime24)                errs.mealTime      = "Meal time is required";
+    if (!cutoffTime24)              errs.cutoffTime    = "Cutoff time is required";
+    else if (timeToMins(cutoffTime) >= timeToMins(mealTime))
       errs.cutoffTime = "Cutoff must be before meal time";
     if (!form.capacity || Number(form.capacity) <= 0)
       errs.capacity = "Capacity must be greater than 0";
@@ -104,8 +179,8 @@ export default function SuperAdminCreateOrganization() {
       companyName:       form.companyName.trim(),
       contactEmail:      form.contactEmail.trim(),
       officeAddress:     form.officeAddress.trim(),
-      mealTime:          form.mealTime,
-      cutoffTime:        form.cutoffTime,
+      mealTime:          mealTime24,
+      cutoffTime:        cutoffTime24,
       allowDishRequests,
       capacity:          Number(form.capacity),
       status,
@@ -118,10 +193,10 @@ export default function SuperAdminCreateOrganization() {
     }
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f7f7f7] p-3 sm:p-6 lg:p-8">
 
-      {/* Breadcrumb + header */}
       <div className="mb-6 sm:mb-8">
         <div className="flex items-center gap-2 mb-2">
           <span onClick={() => navigate("/super-admin/organizations")}
@@ -139,7 +214,6 @@ export default function SuperAdminCreateOrganization() {
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 lg:p-8 shadow-sm mb-6 sm:mb-8 space-y-8">
 
-        {/* ── Organization Details ── */}
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-5">
             Organization Details
@@ -166,26 +240,40 @@ export default function SuperAdminCreateOrganization() {
               </Field>
             </div>
 
-            <Field label="Meal Time" required error={fieldErrors.mealTime} icon={UtensilsCrossed}>
-              <input type="time" value={form.mealTime}
-                onChange={e => { set("mealTime", e.target.value); clearErr("mealTime"); }}
-                className={inputCls} />
-            </Field>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                <UtensilsCrossed size={12} />
+                Meal Time <span className="text-red-400 ml-0.5">*</span>
+              </label>
+              <TimeDropdown
+                value={mealTime}
+                onChange={v => { setMealTime(v); clearErr("mealTime"); }}
+                placeholder="Select meal time"
+                error={fieldErrors.mealTime}
+              />
+            </div>
 
-            <Field label="Attendance Cutoff" required error={fieldErrors.cutoffTime} icon={Clock}>
-              <input type="time" value={form.cutoffTime}
-                onChange={e => { set("cutoffTime", e.target.value); clearErr("cutoffTime"); }}
-                className={inputCls} />
-            </Field>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                <Clock size={12} />
+                Attendance Cutoff <span className="text-red-400 ml-0.5">*</span>
+              </label>
+              <TimeDropdown
+                value={cutoffTime}
+                onChange={v => { setCutoffTime(v); clearErr("cutoffTime"); }}
+                placeholder="Select cutoff time"
+                error={fieldErrors.cutoffTime}
+              />
+            </div>
 
             <Field label="Daily Capacity" required error={fieldErrors.capacity} icon={Users}>
               <input type="number" placeholder="e.g. 500" min={1} value={form.capacity}
                 onChange={e => { set("capacity", e.target.value); clearErr("capacity"); }}
                 className={inputCls} />
             </Field>
+
           </div>
 
-          {/* Toggles */}
           <div className="mt-5 space-y-3">
             <div className="border border-gray-200 rounded-xl px-4 h-12 flex items-center justify-between bg-gray-50">
               <span className="text-sm text-gray-600">
@@ -195,7 +283,8 @@ export default function SuperAdminCreateOrganization() {
                 </span>
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={status} onChange={e => setStatus(e.target.checked)} className="sr-only peer" />
+                <input type="checkbox" checked={status}
+                  onChange={e => setStatus(e.target.checked)} className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-checked:bg-orange-500 rounded-full transition-colors duration-200" />
                 <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 peer-checked:translate-x-5" />
               </label>
@@ -209,7 +298,8 @@ export default function SuperAdminCreateOrganization() {
                 </span>
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={allowDishRequests} onChange={e => setAllowDishRequests(e.target.checked)} className="sr-only peer" />
+                <input type="checkbox" checked={allowDishRequests}
+                  onChange={e => setAllowDishRequests(e.target.checked)} className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-checked:bg-orange-500 rounded-full transition-colors duration-200" />
                 <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 peer-checked:translate-x-5" />
               </label>
@@ -219,7 +309,6 @@ export default function SuperAdminCreateOrganization() {
 
         <p className="text-xs text-gray-400"><span className="text-red-400">*</span> Required fields</p>
 
-        {/* Footer buttons */}
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 border-t border-gray-100 pt-6">
           <button onClick={() => navigate("/super-admin/organizations")} disabled={creating}
             className="px-6 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all disabled:opacity-50 text-center">
@@ -227,7 +316,9 @@ export default function SuperAdminCreateOrganization() {
           </button>
           <button onClick={handleSave} disabled={!isReady || creating}
             className={`bg-[#EA580C] text-white px-8 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
-              !isReady || creating ? "opacity-50 cursor-not-allowed" : "hover:bg-orange-700 shadow-lg shadow-orange-500/20 active:scale-95"
+              !isReady || creating
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-orange-700 shadow-lg shadow-orange-500/20 active:scale-95"
             }`}>
             {creating
               ? <><Loader2 size={18} className="animate-spin" /> Creating…</>
@@ -236,11 +327,10 @@ export default function SuperAdminCreateOrganization() {
         </div>
       </div>
 
-      {/* Feature highlights */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pb-6 sm:pb-8">
         {[
-          { icon: CheckCircle, title: "Instant Setup",      desc: "Organization is live immediately after creation.",              bg: "bg-blue-50",    iconBg: "bg-blue-100",    color: "text-blue-600",    titleColor: "text-blue-900"    },
-          { icon: Clock,       title: "Cutoff Enforcement", desc: "Attendance is automatically locked after the cutoff time.",     bg: "bg-emerald-50", iconBg: "bg-emerald-100", color: "text-emerald-600", titleColor: "text-emerald-900" },
+          { icon: CheckCircle, title: "Instant Setup",      desc: "Organization is live immediately after creation.",               bg: "bg-blue-50",    iconBg: "bg-blue-100",    color: "text-blue-600",    titleColor: "text-blue-900"    },
+          { icon: Clock,       title: "Cutoff Enforcement", desc: "Attendance is automatically locked after the cutoff time.",      bg: "bg-emerald-50", iconBg: "bg-emerald-100", color: "text-emerald-600", titleColor: "text-emerald-900" },
           { icon: Building2,   title: "Isolated Data",      desc: "Each org's attendance, menus, and reviews are fully separated.", bg: "bg-orange-50",  iconBg: "bg-orange-100",  color: "text-orange-600",  titleColor: "text-orange-900"  },
         ].map((item, i) => (
           <div key={i} className={`${item.bg} rounded-xl p-4 sm:p-5 border border-white/50`}>

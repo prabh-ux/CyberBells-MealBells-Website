@@ -1,5 +1,13 @@
-import { BarChart, Bar, Cell, XAxis, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 import DropDown from "../../shared/DropDown"; // adjust path to match your project structure
+import type { AttendanceDataPoint } from "../../../slices/adminAnalyticsSlice";
 
 function barColor(count: number, max: number) {
   const pct = (count / max) * 100;
@@ -29,7 +37,10 @@ const BarTooltipContent = ({ active, payload, label }: any) => {
   return (
     <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg pointer-events-none">
       <p className="font-semibold mb-0.5">{label}</p>
-      <p>Delivered: <span className="text-[#FF7A00] font-bold">{payload[0]?.value}</span></p>
+      <p>
+        Delivered:{" "}
+        <span className="text-[#FF7A00] font-bold">{payload[0]?.value}</span>
+      </p>
     </div>
   );
 };
@@ -38,13 +49,22 @@ const RANGE_OPTIONS = ["Last 7 Days", "Last 14 Days", "Last 30 Days"];
 
 interface Props {
   mealsData: { day: string; count: number }[];
-  mealsMax:  number;
+  mealsMax: number;
   mealRange: string;
-  loading:   boolean;
+  attendanceData: AttendanceDataPoint[];
+
+  loading: boolean;
   onRangeChange: (range: string) => void;
 }
 
-const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, loading, onRangeChange }: Props) => {
+const AnalyticsDashboardMealsChart = ({
+  mealsData,
+  mealsMax,
+  mealRange,
+  loading,
+  onRangeChange,
+  attendanceData,
+}: Props) => {
   return (
     <div className="bg-white rounded-2xl p-4 sm:p-6">
       <div className="flex flex-col min-[480px]:flex-row min-[480px]:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-3">
@@ -76,8 +96,21 @@ const AnalyticsDashboardMealsChart = ({ mealsData, mealsMax, mealRange, loading,
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={mealsData} barCategoryGap="20%" barGap={4}>
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#9CA3AF", fontSize: 10, fontWeight: 500 }} />
-              <Tooltip content={<BarTooltipContent />} cursor={{ fill: "rgba(255,122,0,0.05)" }} />
+              <XAxis
+                dataKey="day"
+                axisLine={false}
+                tickLine={false}
+                interval={
+                  attendanceData.length > 14
+                    ? Math.ceil(attendanceData.length / 8) - 1
+                    : 0
+                }
+                tick={{ fill: "#9CA3AF", fontSize: 10, fontWeight: 500 }}
+              />{" "}
+              <Tooltip
+                content={<BarTooltipContent />}
+                cursor={{ fill: "rgba(255,122,0,0.05)" }}
+              />
               <Bar dataKey="count" shape={<RoundedBar />} radius={[8, 8, 0, 0]}>
                 {mealsData.map((entry, index) => (
                   <Cell key={index} fill={barColor(entry.count, mealsMax)} />

@@ -29,28 +29,7 @@ const platformSettingsSchema = new mongoose.Schema(
       default: true,
     },
 
-    // ── Platform limits ───────────────────────────────────────────────────────
-    maxOrgsPerVendor: {
-      type:    Number,
-      default: 20,
-      min:     1,
-    },
-    maxMembersPerOrg: {
-      type:    Number,
-      default: 500,
-      min:     1,
-    },
-    maxDishRequestsPerDay: {
-      type:    Number,
-      default: 10,
-      min:     0,
-    },
-    attendanceLockHours: {
-      type:    Number,
-      default: 3,
-      min:     0,
-    },
-
+   
     // ── Feature flags ─────────────────────────────────────────────────────────
     vendorOnboarding: {
       type:    Boolean,

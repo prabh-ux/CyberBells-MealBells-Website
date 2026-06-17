@@ -13,13 +13,13 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
-import IcDownload          from "../../assets/IcDownload.png";
-import IcFilter            from "../../assets/IcFilter.png";
-import IcBrain             from "../../assets/IcBrain.png";
-import IcArrowUp           from "../../assets/IcArrowUp.png";
-import IcArrowDown         from "../../assets/IcArrowDown.png";
+import {
+  Download, Filter, Brain, ArrowUp, ArrowDown,
+  ChevronLeft, ChevronRight,
+} from "lucide-react";
 import foodWastageFooterBg from "../../assets/foodWastageFooterBg.png";
 import CustomTooltip       from "../../components/admin/FoodWastageReport/CustomTooltip";
+import DropDown            from "../../components/shared/DropDown";
 
 const PERIODS  = ["Last 7 Days", "Last 14 Days", "Last 30 Days"] as const;
 const DAY_MAP: Record<string, 7 | 14 | 30> = {
@@ -27,7 +27,6 @@ const DAY_MAP: Record<string, 7 | 14 | 30> = {
 };
 const MEAL_OPTIONS  = ["Both", "Veg", "Non-Veg"];
 const CHART_LEGEND: [string, string][] = [["#d1d5db", "Expected"], ["#994700", "Delivered"]];
-const NAV_ICONS     = ["M15 18l-6-6 6-6", "M9 18l6-6-6-6"];
 
 function badgeClass(n: number) {
   if (n >= 100) return "bg-[#FEE2E2] text-[#B91C1C]";
@@ -156,13 +155,12 @@ export default function SuperAdminFoodWastagePage() {
                 {vendorsLoading ? (
                   <Skeleton className="h-[38px] w-full" />
                 ) : (
-                  <select
+                  <DropDown
                     value={localVendor}
-                    onChange={e => setLocalVendor(e.target.value)}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 h-[38px] outline-none focus:border-orange-400 bg-white text-gray-700"
-                  >
-                    {vendorNames.map(v => <option key={v}>{v}</option>)}
-                  </select>
+                    options={vendorNames}
+                    onChange={setLocalVendor}
+                    wfull
+                  />
                 )}
               </div>
 
@@ -171,13 +169,12 @@ export default function SuperAdminFoodWastagePage() {
                 <label className="block text-xs font-bold uppercase tracking-widest text-[#94A3B8] mb-1 font-[var(--font-inter)]">
                   Period
                 </label>
-                <select
+                <DropDown
                   value={localPeriod}
-                  onChange={e => setLocalPeriod(e.target.value as typeof PERIODS[number])}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 h-[38px] outline-none focus:border-orange-400 bg-white text-gray-700"
-                >
-                  {PERIODS.map(p => <option key={p}>{p}</option>)}
-                </select>
+                  options={[...PERIODS]}
+                  onChange={v => setLocalPeriod(v as typeof PERIODS[number])}
+                  wfull
+                />
               </div>
             </div>
 
@@ -187,20 +184,19 @@ export default function SuperAdminFoodWastagePage() {
                 <label className="block text-xs font-bold uppercase tracking-widest text-[#94A3B8] mb-1 font-[var(--font-inter)]">
                   Meal Type
                 </label>
-                <select
+                <DropDown
                   value={localMealType}
-                  onChange={e => setLocalMealType(e.target.value)}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 h-[38px] outline-none focus:border-orange-400 bg-white text-gray-700"
-                >
-                  {MEAL_OPTIONS.map(m => <option key={m}>{m}</option>)}
-                </select>
+                  options={MEAL_OPTIONS}
+                  onChange={setLocalMealType}
+                  wfull
+                />
               </div>
 
               <button
                 onClick={handleApply}
                 className="flex items-center gap-1.5 bg-[var(--brand)] hover:opacity-90 text-white font-semibold text-sm px-4 h-[38px] rounded-lg font-[var(--font-inter)]"
               >
-                <img src={IcFilter} alt="" className="w-3.5 h-3.5 brightness-0 invert" />
+                <Filter className="w-3.5 h-3.5" />
                 Apply
               </button>
             </div>
@@ -220,7 +216,9 @@ export default function SuperAdminFoodWastagePage() {
               }
               {trend && (
                 <span className={`text-[10px] sm:text-xs font-semibold font-[var(--font-inter)] flex items-center gap-1 ${trendBad ? "text-[#BA1A1A]" : "text-[var(--brand)]"}`}>
-                  <img src={trendBad ? IcArrowUp : IcArrowDown} alt="" className="w-3 h-3" />
+                  {trendBad
+                    ? <ArrowUp className="w-3 h-3" />
+                    : <ArrowDown className="w-3 h-3" />}
                   {trend}
                 </span>
               )}
@@ -294,7 +292,7 @@ export default function SuperAdminFoodWastagePage() {
               Detailed Wastage Log
             </h2>
             <button className="flex items-center gap-2 text-sm font-bold text-[var(--brand)] hover:opacity-80 font-[var(--font-inter)]">
-              <img src={IcDownload} alt="" className="w-4 h-4" /> Export Report
+              <Download className="w-4 h-4" /> Export Report
             </button>
           </div>
 
@@ -344,7 +342,7 @@ export default function SuperAdminFoodWastagePage() {
                 : "Loading…"}
             </span>
             <div className="flex items-center gap-2">
-              {NAV_ICONS.map((d, i) => {
+              {[ChevronLeft, ChevronRight].map((Icon, i) => {
                 const isFirst  = i === 0;
                 const disabled = isFirst
                   ? currentPage <= 1
@@ -356,9 +354,7 @@ export default function SuperAdminFoodWastagePage() {
                     onClick={() => dispatch(setSuperWastagePage(currentPage + (isFirst ? -1 : 1)))}
                     className={`w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] hover:bg-[var(--page-bg)] ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d={d} />
-                    </svg>
+                    <Icon className="w-4 h-4" />
                   </button>
                 );
               })}
@@ -387,7 +383,7 @@ export default function SuperAdminFoodWastagePage() {
 
           <div className="bg-white rounded-xl p-5 sm:p-6 shadow-sm flex flex-col items-center text-center justify-center gap-3 sm:gap-4">
             <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-full bg-amber-50 flex items-center justify-center">
-              <img src={IcBrain} alt="" className="w-[55%] h-[55%] object-contain" />
+              <Brain className="w-[55%] h-[55%] text-[var(--brand)]" />
             </div>
             <h3 className="text-sm sm:text-base font-[var(--font-manrope)] text-[var(--text-primary)]">AI Insight</h3>
             <p className="text-xs sm:text-sm text-[var(--text-label)] font-[var(--font-inter)] leading-relaxed max-w-xs">

@@ -7,12 +7,23 @@ import { fetchUserOrganization } from "../../slices/organizationSlice";
 import { formatTime } from "../../utils/Timeformat";
 import {
   Bike, CheckCircle2, MapPin, Package,
-  ShoppingBag, Utensils, RefreshCw, Loader2,
+  ShoppingBag, Utensils, RefreshCw, Loader2, CalendarX,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   Utensils, Package, Bike, MapPin, ShoppingBag,
 };
+
+function isNoDeliveryError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("no dish") ||
+    lower.includes("no delivery") ||
+    lower.includes("not scheduled") ||
+    lower.includes("scheduled for today") ||
+    lower.includes("no order")
+  );
+}
 
 const StepItem: React.FC<{ step: UserDeliveryStep }> = ({ step }) => {
   const Icon = ICON_MAP[step.icon] ?? Utensils;
@@ -60,25 +71,62 @@ const StepItem: React.FC<{ step: UserDeliveryStep }> = ({ step }) => {
   );
 };
 
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+const NoDeliveryState: React.FC<{ onRefresh: () => void; loading: boolean }> = ({ onRefresh, loading }) => (
+  <div className="min-h-screen bg-[#F7F6F3]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+          Delivery Status
+        </h1>
+        <button
+          onClick={onRefresh}
+          className="flex items-center gap-1.5 sm:gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
+      </div>
+
+      <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm p-12 flex flex-col items-center text-center gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+          <CalendarX className="w-7 h-7 text-gray-300" />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-gray-600">No delivery scheduled today</p>
+          <p className="text-xs text-gray-400 mt-1 max-w-[240px] leading-relaxed">
+            Your meal hasn't been scheduled yet. Check back later or contact your organization admin.
+          </p>
+        </div>
+        <button
+          onClick={onRefresh}
+          className="flex items-center gap-1.5 text-xs font-semibold text-orange-500 hover:text-orange-600 transition-colors mt-1"
+        >
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function DeliveryStatus() {
   const dispatch = useDispatch<AppDispatch>();
   const { userDelivery, loadingUserDelivery, userDeliveryError } = useSelector((s: RootState) => s.delivery);
   const org = useSelector((s: RootState) => s.organization.data);
 
-  // Initial fetch
+  const handleRefresh = () => dispatch(fetchUserDelivery());
+
   useEffect(() => {
     dispatch(fetchUserDelivery());
     dispatch(fetchUserOrganization());
   }, [dispatch]);
 
-  // Poll every 30s until delivery is completed
   useEffect(() => {
     if (userDelivery?.isCompleted) return;
-
-    const interval = setInterval(() => {
-      dispatch(fetchUserDelivery());
-    }, 30_000);
-
+    const interval = setInterval(() => dispatch(fetchUserDelivery()), 30_000);
     return () => clearInterval(interval);
   }, [dispatch, userDelivery?.isCompleted]);
 
@@ -91,6 +139,7 @@ export default function DeliveryStatus() {
   const displayEta     = hasLiveEta ? userDelivery!.estimatedArrival : org?.mealTime ? formatTime(org.mealTime) : "—";
   const etaIsScheduled = !hasLiveEta && Boolean(org?.mealTime);
 
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (loadingUserDelivery && !userDelivery)
     return (
       <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center">
@@ -98,18 +147,28 @@ export default function DeliveryStatus() {
       </div>
     );
 
-  if (userDeliveryError)
+  // ── Error ────────────────────────────────────────────────────────────────
+  if (userDeliveryError) {
+    if (isNoDeliveryError(userDeliveryError))
+      return <NoDeliveryState onRefresh={handleRefresh} loading={loadingUserDelivery} />;
+
     return (
       <div className="min-h-screen bg-[#F7F6F3] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
-          <p className="text-gray-500 font-medium mb-3">{userDeliveryError}</p>
-          <button onClick={() => dispatch(fetchUserDelivery())} className="text-sm text-orange-500 underline">
-            Retry
+        <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100 max-w-sm w-full">
+          <p className="text-sm font-semibold text-gray-700 mb-1">Could not load delivery</p>
+          <p className="text-xs text-gray-400 mb-4">{userDeliveryError}</p>
+          <button
+            onClick={handleRefresh}
+            className="text-sm font-bold text-orange-500 hover:text-orange-600 transition-colors"
+          >
+            Try Again
           </button>
         </div>
       </div>
     );
+  }
 
+  // ── Main render ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 lg:py-12">
@@ -119,7 +178,7 @@ export default function DeliveryStatus() {
             Delivery Status
           </h1>
           <button
-            onClick={() => dispatch(fetchUserDelivery())}
+            onClick={handleRefresh}
             className="flex items-center gap-1.5 sm:gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loadingUserDelivery ? "animate-spin" : ""}`} />
@@ -127,11 +186,10 @@ export default function DeliveryStatus() {
           </button>
         </div>
 
-        {userDelivery && (
+        {userDelivery ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
 
             <div className="space-y-4 sm:space-y-5">
-
               <div className="bg-white rounded-[20px] sm:rounded-[24px] p-6 sm:p-8 border border-gray-100 shadow-sm text-center">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4 sm:mb-5">
                   <Bike className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
@@ -209,7 +267,10 @@ export default function DeliveryStatus() {
             </div>
 
           </div>
+        ) : (
+          <NoDeliveryState onRefresh={handleRefresh} loading={loadingUserDelivery} />
         )}
+
       </div>
     </div>
   );

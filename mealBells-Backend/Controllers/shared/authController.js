@@ -7,7 +7,7 @@ const cookieOptions = {
   httpOnly: true,
   secure:   process.env.NODE_ENV === 'production',
   sameSite: 'strict',
-  maxAge:   24 * 60 * 60 * 1000,
+  maxAge:   15 * 24 * 60 * 60 * 1000, // 15 days
 };
 
 export const signUp = async (req, res) => {
@@ -31,7 +31,7 @@ export const signUp = async (req, res) => {
         type:           newUser.type,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '15d' }
     );
 
     res
@@ -66,7 +66,7 @@ export const login = async (req, res) => {
         type:           user.type,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '15d' }
     );
 
     res

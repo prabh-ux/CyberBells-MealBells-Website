@@ -124,6 +124,8 @@ export default function AnalyticsDashboard() {
             mealsMax={mealsMax}
             mealRange={mealRange}
             loading={mealsLoading}
+                         attendanceData={attendanceData}
+
             onRangeChange={setMealRange}
           />
           <AnalyticsDashboardAttendanceChart

@@ -160,6 +160,7 @@ export default function SuperAdminAnalyticsDashboard() {
             mealsMax={mealsMax}
             mealRange={mealRange}
             loading={mealsLoading}
+             attendanceData={attendanceData}
             onRangeChange={setMealRange}
           />
           <AnalyticsDashboardAttendanceChart

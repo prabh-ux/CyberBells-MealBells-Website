@@ -12,10 +12,10 @@ export interface PlatformDefaults {
 }
 
 export interface PlatformLimits {
-  maxOrgsPerVendor:    number;
-  maxMembersPerOrg:    number;
+  maxOrgsPerVendor:      number;
+  maxMembersPerOrg:      number;
   maxDishRequestsPerDay: number;
-  attendanceLockHours: number;
+  attendanceLockHours:   number;
 }
 
 export interface FeatureFlags {
@@ -80,11 +80,14 @@ export const updateSuperAdminSettings = createAsyncThunk(
 
 // ── Slice ─────────────────────────────────────────────────────────────────────
 
+// All time/numeric defaults are empty/zero so they never "flash" wrong values
+// before the real API response arrives. The component only applies defaults
+// once `fetched` is true.
 const SETTINGS_DEFAULT: SuperAdminSettings = {
   defaults: {
-    defaultMealTime:          "12:30",
-    defaultCutoffTime:        "09:00",
-    defaultCapacity:          50,
+    defaultMealTime:          "",    // ← empty; real value comes from DB
+    defaultCutoffTime:        "",    // ← empty; real value comes from DB
+    defaultCapacity:          0,     // ← zero;  real value comes from DB
     defaultBillingPlan:       "pro",
     defaultAllowDishRequests: true,
   },
@@ -116,6 +119,7 @@ const superAdminSlice = createSlice({
   initialState: {
     settings: SETTINGS_DEFAULT,
     loading:  false,
+    fetched:  false,   // ← true only after a real API response (success or fail)
     saving:   false,
     error:    null as string | null,
   },
@@ -125,8 +129,16 @@ const superAdminSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchSuperAdminSettings.pending,   (s) => { s.loading = true;  s.error = null; })
-      .addCase(fetchSuperAdminSettings.fulfilled, (s, { payload }) => { s.loading = false; s.settings = payload; })
-      .addCase(fetchSuperAdminSettings.rejected,  (s, { payload }) => { s.loading = false; s.error = payload as string; });
+      .addCase(fetchSuperAdminSettings.fulfilled, (s, { payload }) => {
+        s.loading  = false;
+        s.fetched  = true;   // ← real DB data is now in state
+        s.settings = payload;
+      })
+      .addCase(fetchSuperAdminSettings.rejected,  (s, { payload }) => {
+        s.loading = false;
+        s.fetched = true;    // ← fetch finished (even if it failed)
+        s.error   = payload as string;
+      });
 
     builder
       .addCase(updateSuperAdminSettings.pending,   (s) => { s.saving = true;  s.error = null; })

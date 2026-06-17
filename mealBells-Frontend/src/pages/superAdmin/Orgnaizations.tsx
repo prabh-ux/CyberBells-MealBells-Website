@@ -5,7 +5,7 @@ import { useDispatch, useSelector }     from "react-redux";
 import {
   AlertCircle, Building2, ChevronLeft,
   ChevronRight, Pencil, Plus, RefreshCw, Trash2,
-  ToggleLeft, ToggleRight
+  ToggleLeft, ToggleRight, Search,
 } from "lucide-react";
 
 import {
@@ -19,6 +19,7 @@ import {
   type OrgStatus,
 } from "../../slices/superAdmin/superAdminOrganizationSlice";
 import type { AppDispatch, RootState } from "../../app/store";
+import DropDown from "../../components/shared/DropDown";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,12 @@ function getOrgAvatar(name: string) {
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+const SORT_OPTIONS: { label: string; value: OrgSortBy }[] = [
+  { label: "Sort: Joined date", value: "createdAt" },
+  { label: "Sort: Name",        value: "name" },
+  { label: "Sort: Users",       value: "users" },
+];
 
 // ── Status pill ───────────────────────────────────────────────────────────────
 
@@ -151,6 +158,8 @@ export default function Organizations() {
     return [1, "...", cur - 1, cur, cur + 1, "...", total];
   }, [pagination]);
 
+  const sortLabel = SORT_OPTIONS.find(o => o.value === filters.sortBy)?.label ?? SORT_OPTIONS[0].label;
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6">
 
@@ -211,9 +220,7 @@ export default function Organizations() {
       {/* Filters row */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 flex-1 min-w-[180px] max-w-xs">
-          <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="m21 21-4.35-4.35" />
-          </svg>
+          <Search size={16} className="text-gray-400 shrink-0" />
           <input
             type="text"
             value={filters.search}
@@ -242,15 +249,17 @@ export default function Organizations() {
           ))}
         </div>
 
-        <select
-          value={filters.sortBy}
-          onChange={e => handleFilterChange({ sortBy: e.target.value as OrgSortBy })}
-          className="text-xs text-gray-500 bg-white border border-gray-200 rounded-xl px-3 py-1.5 outline-none cursor-pointer hover:bg-gray-50 ml-auto"
-        >
-          <option value="createdAt">Sort: Joined date</option>
-          <option value="name">Sort: Name</option>
-          <option value="users">Sort: Users</option>
-        </select>
+        <div className="ml-auto w-[170px]">
+          <DropDown
+            value={sortLabel}
+            options={SORT_OPTIONS.map(o => o.label)}
+            onChange={label => {
+              const opt = SORT_OPTIONS.find(o => o.label === label);
+              if (opt) handleFilterChange({ sortBy: opt.value });
+            }}
+            wfull
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -355,17 +364,7 @@ export default function Organizations() {
                             <Pencil size={14} />
                           </button>
 
-                          {/* View */}
-                          <button
-                            onClick={() => navigate(`/super-admin/organizations/${org._id}`)}
-                            title="View"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
+                        
 
                           {/* Delete */}
                           <button
