@@ -72,7 +72,7 @@ const upload = (fieldName) => (req, res, next) => {
 const router = Router();
 
 const ensureSuperAdmin = (req, res, next) => {
-  if (req.user?.type !== "admin") {
+  if (req.user?.type !== "super_admin") {
     return res.status(403).json({ msg: "Forbidden: Super admin access required" });
   }
   next();

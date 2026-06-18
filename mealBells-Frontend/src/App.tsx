@@ -141,7 +141,7 @@ function App() {
             {/* ── Super Admin — requires auth + super_admin type ── */}
             {/* allowedTypes={["super_admin"]}  */}
             <Route
-              element={<ProtectedRoute requireAuth allowedTypes={["admin"]} />}
+              element={<ProtectedRoute requireAuth allowedTypes={["super_admin"]} />}
             >
               <Route
                 path="/super-admin"
