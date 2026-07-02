@@ -12,8 +12,9 @@ interface Props {
 }
 
 const getHomeByType = (type: string) => {
-  if (type === "vendor") return "/vendor/dashboard";
-  if (type === "admin")  return "/admin/dashboard";
+  if (type === "vendor")      return "/vendor/dashboard";
+  if (type === "admin")       return "/admin/dashboard";
+  if (type === "super_admin") return "/super-admin/organizations";
   return "/user/today-menu";
 };
 
