@@ -190,8 +190,8 @@ const VendorReviews = () => {
                     <div key={key}>
                       <p className="text-[10px] sm:text-xs text-gray-400 capitalize mb-1">{key}</p>
                       <div className="flex items-center gap-1 sm:gap-1.5">
-                        <span className="text-xs sm:text-sm font-bold text-gray-900">{value}/10</span>
-                        <StarRating rating={Math.round(value / 2)} size="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <span className="text-xs sm:text-sm font-bold text-gray-900">{value}/5</span>
+                        <StarRating rating={Math.round(value)} size="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                       </div>
                     </div>
                   ))}
@@ -200,7 +200,7 @@ const VendorReviews = () => {
                 {/* View Detail */}
                 <button
                   onClick={() => navigate(`/vendor/reviews/${item._id}`)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   View Detail
                   <ArrowRight className="w-4 h-4" />

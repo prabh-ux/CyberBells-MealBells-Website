@@ -50,6 +50,8 @@ const buildVendorSteps = (delivery) => {
     const subtitle =
       status === "completed" && delivery.stepTimes[key]
         ? `Completed at ${fmtTime(delivery.stepTimes[key])}`
+        : status === "current" && delivery.stepTimes[key]
+        ? `Started at ${fmtTime(delivery.stepTimes[key])}`
         : "";
     return { key, label: STEP_LABELS[key].label, status, subtitle };
   });

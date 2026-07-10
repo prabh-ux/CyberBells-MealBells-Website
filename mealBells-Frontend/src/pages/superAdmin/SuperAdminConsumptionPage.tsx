@@ -212,6 +212,74 @@ export default function SuperAdminConsumptionPage() {
     },
   ];
 
+  const handleExport = () => {
+    const clean = (s) => String(s).replace(/[^a-zA-Z0-9-_]/g, "_");
+    const esc   = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+
+    const sections = [];
+
+    // ── Filters applied ──
+    sections.push(["Filters Applied"]);
+    sections.push(["Organization", "Time Frame"]);
+    sections.push([activeOrgLabel, timeFrame]);
+    sections.push([]);
+
+    // ── Summary ──
+    sections.push(["Summary"]);
+    sections.push(["Total Consumption", "User Growth %", "Top Dish", "Top Dish Popularity %", "Most Active Dept", "Most Active Dept Meals", "Least Active Day"]);
+    sections.push([
+      totalConsumed,
+      summary?.userGrowthPct ?? "",
+      breakdown?.topDish?.name ?? "",
+      breakdown?.topDish?.popularity ?? "",
+      breakdown?.mostActiveDept?.name ?? "",
+      breakdown?.mostActiveDept?.count ?? "",
+      breakdown?.leastActiveDay?.name ?? "",
+    ]);
+    sections.push([]);
+
+    // ── Meals over time ──
+    sections.push(["Meals Consumed Over Time"]);
+    sections.push(["Date", "Day", "Meal Count"]);
+    chartData.forEach(d => sections.push([d.fullDate, d.day, d.count]));
+    sections.push([]);
+
+    // ── Veg vs Non-Veg breakdown ──
+    sections.push(["Veg vs Non-Veg Breakdown"]);
+    sections.push(["Type", "Percent", "Count"]);
+    sections.push(["Veg", `${vegPct}%`, mb?.vegCount ?? 0]);
+    sections.push(["Non-Veg", `${nonVegPct}%`, mb?.nonVegCount ?? 0]);
+    sections.push(["Both", `${bothPct}%`, mb?.bothCount ?? 0]);
+    sections.push([]);
+
+    // ── Heatmap (dept x day) ──
+    sections.push(["Most Active Departments by Day"]);
+    sections.push(["Department", ...DAYS_OF_WEEK]);
+    heatmapRows.forEach(row => sections.push([row.dept, ...row.counts]));
+    sections.push([]);
+
+    // ── Live feed ──
+    sections.push(["Live Consumption Feed"]);
+    sections.push(["Time", "Employee", "Department", "Item Ordered", "Status"]);
+    liveFeed.forEach(item => sections.push([item.time, item.employee, item.department, item.item, item.status]));
+
+    if (chartData.length === 0 && liveFeed.length === 0 && !breakdown) return;
+
+    const csvContent = sections.map(row => row.map(esc).join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href  = url;
+
+    const fileName = `consumption_report_${clean(activeOrgId === "all" ? "All-Orgs" : activeOrgLabel)}_${clean(timeFrame)}.csv`;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-[#fcfcfc] p-4 md:p-6 select-none overflow-y-auto">
       <div className="max-w-7xl mx-auto">
@@ -237,7 +305,7 @@ export default function SuperAdminConsumptionPage() {
                 }
               />
             </div>
-            <button className="bg-[#934411] hover:bg-[#7a380e] text-white px-4 py-2 rounded-xl text-xs font-medium flex items-center gap-2">
+            <button onClick={handleExport} className="bg-[#934411] hover:bg-[#7a380e] text-white w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-bold px-4 sm:px-5 py-2.5 rounded-xl shadow-lg cursor-pointer">
               <Download className="w-4 h-4" /> Export CSV
             </button>
           </div>

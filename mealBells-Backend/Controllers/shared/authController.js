@@ -58,6 +58,10 @@ export const login = async (req, res) => {
       return res.status(401).json({ msg: "Email or password incorrect" });
     }
 
+    if (!user.active) {
+      return res.status(403).json({ msg: "Your account has been deactivated" });
+    }
+
     const token = jwt.sign(
       {
         email:          user.email,

@@ -46,6 +46,24 @@ const ProfileSettings = () => {
   };
 
   const handleSave = async () => {
+
+    if (name && name.trim().length < 2) {
+      toast.error("Name is too short.");
+      return;
+    }
+    if (name && !/^[A-Za-z\s]+$/.test(name)) {
+      toast.error("Name can only contain letters and spaces.");
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (phone && !/^[0-9]{10}$/.test(phone)) {
+      toast.error("Phone number must be 10 digits.");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("name",  name);
     fd.append("phone", phone);
@@ -141,14 +159,14 @@ const ProfileSettings = () => {
                   <label className="text-xs font-medium text-slate-500">Full Name</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputCls} />
+                    <input type="text" value={name} onChange={e => setName(e.target.value.replace(/[^A-Za-z\s]/g, ""))} className={inputCls} />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-slate-500">Phone Number</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className={inputCls} />
+                    <input type="text" value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, ""))} className={inputCls} />
                   </div>
                 </div>
               </div>
@@ -257,7 +275,7 @@ const ProfileSettings = () => {
             <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-sm flex flex-col gap-3">
               <button
                 onClick={handleSave} disabled={saving}
-                className="w-full bg-[#FA7000] text-white py-2.5 px-4 rounded-xl font-medium text-sm hover:bg-[#E06400] transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-[#FA7000] text-white py-2.5 px-4 rounded-xl font-medium text-sm hover:bg-[#E06400] transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {saving
                   ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
@@ -266,14 +284,14 @@ const ProfileSettings = () => {
               </button>
               <button
                 onClick={handleCancel} disabled={saving}
-                className="w-full bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl font-medium text-sm hover:bg-slate-200 transition disabled:opacity-60"
+                className="w-full bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl font-medium text-sm hover:bg-slate-200 transition disabled:opacity-60 cursor-pointer"
               >
                 Cancel
               </button>
               <hr className="border-slate-100 my-1" />
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 text-rose-600 font-medium text-sm py-2 hover:text-rose-700 transition"
+                className="w-full flex items-center justify-center gap-2 text-rose-600 font-medium text-sm py-2 hover:text-rose-700 transition cursor-pointer"
               >
                 <LogOut className="w-4 h-4" /> Logout Session
               </button>

@@ -51,8 +51,12 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
     if (sliceError) setLocalError(sliceError);
   }, [sliceError]);
 
-  const set = (k: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value;
+    if (k === "name")  v = v.replace(/[^A-Za-z\s]/g, "");
+    if (k === "phone") v = v.replace(/[^0-9]/g, "");
+    setForm((f) => ({ ...f, [k]: v }));
+  };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,6 +67,24 @@ function EditProfilePage({ onBack }: { onBack: () => void }) {
 
   const handleSave = async () => {
     setLocalError("");
+
+    if (form.name && form.name.trim().length < 2) {
+      setLocalError("Name is too short.");
+      return;
+    }
+    if (form.name && !/^[A-Za-z\s]+$/.test(form.name)) {
+      setLocalError("Name can only contain letters and spaces.");
+      return;
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setLocalError("Enter a valid email address.");
+      return;
+    }
+    if (form.phone && !/^[0-9]{10}$/.test(form.phone)) {
+      setLocalError("Phone number must be 10 digits.");
+      return;
+    }
+
     const fd = new FormData();
     if (form.name  !== user?.name)  fd.append("name",  form.name);
     if (form.email !== user?.email) fd.append("email", form.email);
@@ -170,7 +192,6 @@ function ChangePasswordPage({ onBack }: { onBack: () => void }) {
 
     if (!form.current)              { setError("Enter your current password."); return; }
     if (form.next.length < 8)       { setError("New password must be at least 8 characters."); return; }
-    if (!/^[A-Z]/.test(form.next))  { setError("New password must start with a capital letter."); return; }
     if (form.next !== form.confirm) { setError("Passwords do not match."); return; }
 
     try {

@@ -296,6 +296,58 @@ export default function AttendanceSummary() {
   const selectedDepartment = filters.department === "all" ? "All Departments" : filters.department;
   const selectedMealType   = FILTER_TO_MEAL_TYPE[filters.mealType] ?? filters.mealType;
 
+  // const departmentOptions  = ["All Departments", ...DEPARTMENTS];
+  // const selectedDepartment = filters.department === "all" ? "All Departments" : filters.department;
+  // const selectedMealType   = FILTER_TO_MEAL_TYPE[filters.mealType] ?? filters.mealType;
+
+  const handleExport = () => {
+    const clean = (s: string) => String(s).replace(/[^a-zA-Z0-9-_]/g, "_");
+    const esc   = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+
+    const sections: (string | number)[][] = [];
+
+    sections.push(["Filters Applied"]);
+    sections.push(["Department", "Vendor", "Meal Type", "Date Range"]);
+    sections.push([selectedDepartment, selectedVendorLabel, selectedMealType, DAYS_TO_DATE_LABEL[filters.days]]);
+    sections.push([]);
+
+    sections.push(["Summary"]);
+    sections.push(["Avg Attendance %", "Total Users", "Meals", "Total Vendors", "User Growth %"]);
+    sections.push([
+      summary ? `${summary.attendancePct ?? 0}%` : "",
+      summary ? summary.totalUsers : "",
+      summary ? summary.mealsToday : "",
+      summary ? summary.totalVendors : "",
+      summary?.userGrowthPct != null ? `${summary.userGrowthPct}%` : "",
+    ]);
+    sections.push([]);
+
+    sections.push(["Meals by Day"]);
+    sections.push(["Date", "Day", "Meal Count"]);
+    mealsData.forEach(d => sections.push([d.fullDate, d.day, d.count]));
+    sections.push([]);
+
+    sections.push(["Daily Attendance"]);
+    sections.push(["Date", "Day", "Present %", "Absent %", "Gap %"]);
+    attendanceData.forEach(d => sections.push([d.fullDate, d.day, `${d.present}%`, `${d.absent}%`, `${d.gap}%`]));
+
+    if (mealsData.length === 0 && attendanceData.length === 0 && !summary) return;
+
+    const csvContent = sections.map(row => row.map(esc).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href  = url;
+
+    const deptName = filters.department === "all" ? "All-Depts" : filters.department;
+    const fileName = `attendance_report_${clean(deptName)}_${clean(DAYS_TO_DATE_LABEL[filters.days])}.csv`;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FB] p-3 sm:p-5 lg:p-8 font-sans">
 
@@ -307,7 +359,7 @@ export default function AttendanceSummary() {
             Meal attendance analytics for {DAYS_TO_DATE_LABEL[filters.days].toLowerCase()}
           </p>
         </div>
-        <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:scale-95 transition-all text-white text-sm font-bold px-4 sm:px-5 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 cursor-pointer">
+        <button onClick={handleExport} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:scale-95 transition-all text-white text-sm font-bold px-4 sm:px-5 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 cursor-pointer">
           <Download size={15} /> Export Report
         </button>
       </div>

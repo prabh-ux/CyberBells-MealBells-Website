@@ -108,10 +108,6 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
       setError("New password must be at least 6 characters.");
       return;
     }
-    if (!/^[A-Z]/.test(newPassword)) {
-      setError("New password must start with a capital letter.");
-      return;
-    }
     if (newPassword !== confirmPassword) {
       setError("New passwords do not match.");
       return;
@@ -439,7 +435,7 @@ useEffect(() => {
           />
           <button
             onClick={() => setShowChangePassword(true)}
-            className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto justify-center sm:justify-start"
+            className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto justify-center sm:justify-start cursor-pointer"
           >
             <img src={lockReset} alt="key" className="h-4 w-4 opacity-60 shrink-0" />
             Change Password
@@ -453,13 +449,13 @@ useEffect(() => {
         <button
           onClick={handleSave}
           disabled={saving || loading}
-          className="w-full rounded-2xl bg-orange-500 py-4 text-base font-medium text-white hover:bg-orange-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full rounded-2xl bg-orange-500 py-4 text-base font-medium text-white hover:bg-orange-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         >
           {saving ? "Saving…" : "Save Settings"}
         </button>
         <div className="flex items-center justify-center gap-1.5">
           <img src={refreshIcon} alt="reset" className="h-3.5 w-3.5 opacity-50" />
-          <button onClick={handleReset} className="text-sm text-gray-500 hover:text-gray-700">
+          <button onClick={handleReset} className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer">
             Reset to Default
           </button>
         </div>

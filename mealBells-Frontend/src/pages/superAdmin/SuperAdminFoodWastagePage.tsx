@@ -128,6 +128,39 @@ export default function SuperAdminFoodWastagePage() {
     },
   ];
 
+  const handleExport = () => {
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+
+    if (tableRows.length === 0) return;
+
+    const headers = ["Date", "Expected", "Delivered", "Eaten", "Wastage", "Wastage %"];
+    const rows = tableRows.map(row => [
+      row.fullDate,
+      row.expected,
+      row.delivered,
+      row.eaten,
+      row.wastageCount,
+      `${row.wastagePercent}%`,
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map(r => r.map(esc).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href  = url;
+
+    const firstDate = tableRows[tableRows.length - 1]?.fullDate ?? "";
+    const lastDate  = tableRows[0]?.fullDate ?? "";
+    link.setAttribute("download", `wastage_report_page${currentPage}_${firstDate}_to_${lastDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] font-[var(--font-manrope)]">
       <div className="mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
@@ -291,7 +324,7 @@ export default function SuperAdminFoodWastagePage() {
             <h2 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
               Detailed Wastage Log
             </h2>
-            <button className="flex items-center gap-2 text-sm font-bold text-[var(--brand)] hover:opacity-80 font-[var(--font-inter)]">
+            <button onClick={handleExport} disabled={tableRows.length === 0} className="flex items-center gap-2 text-sm font-bold text-[var(--brand)] hover:opacity-80 font-[var(--font-inter)] cursor-pointer">
               <Download className="w-4 h-4" /> Export Report
             </button>
           </div>

@@ -304,7 +304,7 @@ export default function Organizations() {
                     <tr
                       key={org._id}
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/super-admin/organizations/${org._id}`)}
+                      onClick={() => navigate(`/super-admin/organizations/${org._id}/edit`)}
                     >
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">

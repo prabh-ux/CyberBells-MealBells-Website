@@ -79,7 +79,7 @@ const ReviewDetail = () => {
       <div className="max-w-7xl mx-auto mb-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm font-semibold text-orange-600 hover:text-orange-400 p-2.5 sm:p-3 bg-white rounded-xl transition-colors"
+          className="flex items-center gap-2 text-sm font-semibold text-orange-600 hover:text-orange-400 p-2.5 sm:p-3 bg-white rounded-xl transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           Back
@@ -161,10 +161,10 @@ const ReviewDetail = () => {
                   <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500" />
                   <span className="text-sm font-semibold text-gray-700 capitalize">{label}</span>
                 </div>
-                <span className="text-sm font-bold text-gray-900">{score}/10</span>
+                <span className="text-sm font-bold text-gray-900">{score}/5</span>
               </div>
               <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${(score / 10) * 100}%` }} />
+                <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${(score / 5) * 100}%` }} />
               </div>
             </div>
           ))}

@@ -80,11 +80,10 @@ const StepItem: React.FC<{ step: DeliveryStep; isLast: boolean }> = ({ step, isL
     <div className={[
       "relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all",
       step.status === "completed" ? "bg-orange-500"                        : "",
-      step.status === "current"   ? "bg-orange-500 ring-4 ring-orange-100" : "",
+      step.status === "current"   ? "bg-orange-500 ring-4 ring-orange-100 animate-pulse" : "",
       step.status === "pending"   ? "bg-white border-2 border-gray-200"    : "",
     ].join(" ")}>
-      {step.status === "completed" && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
-      {step.status === "current"   && <Clock className="w-4 h-4 text-white" strokeWidth={2} />}
+      {(step.status === "completed" || step.status === "current") && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
     </div>
     <div className="pt-1 pb-6">
       <p className={`text-sm font-semibold ${
@@ -286,13 +285,13 @@ const DeliveryStatusVendor: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 mt-3">
-                  {delivery.steps.filter(s => s.status === "completed").length} of {delivery.steps.length} steps completed
+                  {delivery.steps.filter(s => s.status === "completed" || s.status === "current").length} of {delivery.steps.length} steps completed
                 </p>
                 <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-orange-500 rounded-full transition-all duration-500"
                     style={{
-                      width: `${(delivery.steps.filter(s => s.status === "completed").length / delivery.steps.length) * 100}%`,
+                      width: `${(delivery.steps.filter(s => s.status === "completed" || s.status === "current").length / delivery.steps.length) * 100}%`,
                     }}
                   />
                 </div>

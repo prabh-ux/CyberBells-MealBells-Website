@@ -7,17 +7,7 @@ export const signUpValidator = (req, res, next) => {
 
         name: Joi.string().min(3).max(100).required(),
         email: Joi.string().email().required(),
-        password: Joi.string().min(4).max(100).required().custom((value, helper) => {
-
-            if (value[0] !== value[0].toUpperCase()) {
-
-                return helper.message("First Letter of Password Should Be Uppercase");
-
-            }
-            return value;
-
-        })
-
+        password: Joi.string().min(4).max(100).required()
 
     })
 
@@ -35,13 +25,7 @@ export const loginValidator = (req, res, next) => {
     const schema = Joi.object({
 
         email: Joi.string().email().required(),
-        password: Joi.string().min(4).max(100).required().custom((value, helper) => {
-            if (value[0] !== value[0].toUpperCase()) {
-                return helper.message("First Letter of Password Should Be Uppercase");
-            }
-            return value;
-        })
-
+        password: Joi.string().min(4).max(100).required()
 
     })
 
