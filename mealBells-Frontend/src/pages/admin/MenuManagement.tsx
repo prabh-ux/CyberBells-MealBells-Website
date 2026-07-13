@@ -28,7 +28,7 @@ import { TIME_SLOTS } from '../../data/MenuOverview'
 
 import type { DishType, FormState, PeriodKey, VendorKey } from '../../types/admin'
 
-type ErrorFields = Partial<Record<'dishName' | 'vendor', string>>
+type ErrorFields = Partial<Record<'dishName' | 'vendor'| 'scheduledDate', string>>
 
 interface StatState {
   qualityScore:      string
@@ -162,8 +162,8 @@ const AddEditDish = () => {
   }
 
   const isFormReady = useMemo(() =>
-    form.dishName.trim().length > 0 && form.vendor !== 'All Vendors',
-  [form.dishName, form.vendor])
+    form.dishName.trim().length > 0 && form.vendor !== 'All Vendors' && form.scheduledDate.trim().length > 0,
+  [form.dishName, form.vendor, form.scheduledDate])
 
   const isSaveDisabled = !isFormReady || saving
 
@@ -178,6 +178,7 @@ const AddEditDish = () => {
     const errors: ErrorFields = {}
     if (!form.dishName.trim())                         errors.dishName = 'Dish name is required'
     if (!form.vendor || form.vendor === 'All Vendors') errors.vendor   = 'Please select a vendor'
+    if (!form.scheduledDate.trim())                    errors.scheduledDate = 'Schedule date is required'
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
@@ -201,7 +202,7 @@ const AddEditDish = () => {
     payload.append('qualityScore',      stats.qualityScore)
     payload.append('estimatedCalories', stats.estimatedCalories)
     payload.append('prepTime',          stats.prepTime)
-    if (form.scheduledDate) payload.append('scheduledDate', form.scheduledDate)
+    payload.append('scheduledDate', form.scheduledDate)
     if (form.imageFile)     payload.append('image', form.imageFile)
 
     if (isEdit && id) {
@@ -407,20 +408,22 @@ const AddEditDish = () => {
               </div>
 
               <div>
-                <FieldLabel>
-                  Schedule Date{' '}
-                  <span className="text-[11px] text-[var(--text-label)] font-normal">(optional)</span>
+                <FieldLabel required>
+                  Schedule Date
                 </FieldLabel>
-                <div className="flex items-center gap-3 border border-[#E0C0AF] rounded-xl px-3 sm:px-4 py-[11px] focus-within:border-[#F97316] transition-colors">
+                <div className={`flex items-center gap-3 border rounded-xl px-3 sm:px-4 py-[11px] transition-colors ${fieldBorder('scheduledDate')}`}>
                   <img src={calanderIcon} alt="" className="w-[15px] h-[15px] object-contain shrink-0" />
                   <input
                     type="date"
                     min={todayStr}
                     value={form.scheduledDate}
-                    onChange={e => set('scheduledDate', e.target.value)}
+                    onChange={e => { set('scheduledDate', e.target.value); clearFieldError('scheduledDate') }}
                     className="flex-1 text-[14px] text-[var(--text-primary)] font-[var(--font-inter)] focus:outline-none bg-transparent"
                   />
                 </div>
+                {fieldErrors.scheduledDate && (
+                  <p className="text-xs text-red-500 font-medium mt-1">{fieldErrors.scheduledDate}</p>
+                )}
                 <p className="text-[11px] text-[var(--text-label)] mt-1">
                   Pick a date to show this dish on the user's home screen
                 </p>
@@ -441,7 +444,7 @@ const AddEditDish = () => {
             className={`flex-1 flex items-center justify-center gap-2.5 text-white font-bold text-[14px] sm:text-[15px] py-[13px] sm:py-[14px] rounded-xl transition-all font-[var(--font-manrope)] ${
               isSaveDisabled
                 ? 'bg-[#FF7A00] opacity-50 cursor-not-allowed'
-                : 'bg-[#FF7A00] hover:brightness-90 active:brightness-75'
+                : 'bg-[#FF7A00] hover:brightness-90 active:brightness-75 cursor-pointer'
             }`}
           >
             <img src={save} alt="" className="w-[16px] h-[16px] sm:w-[17px] sm:h-[17px] object-contain" />
@@ -451,7 +454,7 @@ const AddEditDish = () => {
             type="button"
             onClick={() => isEdit ? navigate('/admin/menu-overview') : (setForm(EMPTY_FORM), setStats(DEFAULT_STATS), setFieldErrors({}))}
             disabled={saving}
-            className="w-full sm:w-[120px] border border-[var(--border)] bg-[#F1F5F9] hover:bg-[var(--divider)] disabled:opacity-60 text-[var(--text-primary)] font-semibold text-[14px] py-[13px] sm:py-[14px] rounded-xl transition-colors font-[var(--font-manrope)]"
+            className="w-full sm:w-[120px] border border-[var(--border)] bg-[#F1F5F9] hover:bg-[var(--divider)] disabled:opacity-60 text-[var(--text-primary)] font-semibold text-[14px] py-[13px] sm:py-[14px] rounded-xl transition-colors font-[var(--font-manrope)] cursor-pointer"
           >
             {isEdit ? 'Back' : 'Cancel'}
           </button>

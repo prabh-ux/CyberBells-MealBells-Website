@@ -48,7 +48,7 @@ const MenuCard = ({
             )}
             <button
               onClick={() => onEdit(item)}
-              className="flex items-center gap-1.5 bg-[#FF7A00] hover:brightness-90 active:brightness-75 text-white text-[13px] font-semibold px-4 py-[7px] rounded-lg transition-all [font-family:var(--font-inter)]"
+              className="flex items-center gap-1.5 bg-[#FF7A00] hover:brightness-90 active:brightness-75 text-white text-[13px] font-semibold px-4 py-[7px] rounded-lg transition-all [font-family:var(--font-inter)] cursor-pointer"
             >
               <img src={editIconWhite} alt="" className="w-3 h-3 object-contain" />
               Edit

@@ -5,8 +5,7 @@ import { platformSettingsModel } from "../../Models/platformSettings.js";
 import bcrypt                    from "bcryptjs";
 
 const generatePassword = () => {
-  const raw = Math.random().toString(36).slice(-8) + "1!";
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
+  return Math.random().toString(36).slice(-8) + "1!";
 };
 
 // ── GET /vendor/organizations ─────────────────────────────────────────────────

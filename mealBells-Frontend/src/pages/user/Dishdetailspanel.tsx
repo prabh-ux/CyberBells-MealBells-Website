@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { AppDispatch, RootState } from "../../app/store";
 import { fetchDishDetails, patchDishAttendance, resetDishDetails } from "../../slices/userSlice";
+import toast from "react-hot-toast";
 
 export default function DishDetailsPanel() {
   const { scheduleId } = useParams<{ scheduleId: string }>();
@@ -28,11 +29,18 @@ export default function DishDetailsPanel() {
     return d.toDateString() !== today.toDateString() && d < today;
   };
 
-  const handleAttendance = () => {
+  // ── handleAttendance: add success/error toast handling ───────────────────────
+  const handleAttendance = async () => {
     if (!data || voting) return;
     if (data.scheduledDate && isPast(data.scheduledDate)) return;
     const next = data.myAttendance === "yes" ? "no" : "yes";
-    dispatch(patchDishAttendance({ scheduleId: data.scheduleId, response: next }));
+    const result = await dispatch(patchDishAttendance({ scheduleId: data.scheduleId, response: next }));
+
+    if (patchDishAttendance.fulfilled.match(result)) {
+      toast.success(next === "yes" ? "Marked as attending!" : "Marked as skipping.");
+    } else {
+      toast.error((result.payload as string) ?? "Failed to update attendance.");
+    }
   };
 
   /* ── Loading ── */

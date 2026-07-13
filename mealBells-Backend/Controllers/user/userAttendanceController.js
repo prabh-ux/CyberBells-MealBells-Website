@@ -3,6 +3,7 @@ import { MenuSchedule } from "../../Models/menuSchedule.js";
 import { Attendance }   from "../../Models/attendance.js";
 import { userModel }    from "../../Models/user.js";
 import { Delivery }     from "../../Models/delivery.js";   // ← add this
+import { organizationModel } from "../../Models/organization.js";
 
 const toUTCMidnight = (date = new Date()) => {
   const d = new Date(date);
@@ -24,6 +25,27 @@ export const markAttendance = async (req, res) => {
 
     if (!["yes", "no"].includes(response)) {
       return res.status(400).json({ success: false, msg: 'response must be "yes" or "no"' });
+    }
+
+     // ── Block if past org's daily cutoff time ────────────────────────────────
+    const org = await organizationModel.findById(organizationId).select("cutoffTime").lean();
+    if (org?.cutoffTime) {
+      const [cutoffHour, cutoffMin] = org.cutoffTime.split(":").map(Number);
+
+      // IST = UTC+5:30 — adjust if your org's cutoff is meant in a different tz
+      const nowUTC   = new Date();
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
+      const nowIST   = new Date(nowUTC.getTime() + istOffsetMs);
+
+      const cutoffIST = new Date(nowIST);
+      cutoffIST.setUTCHours(cutoffHour, cutoffMin, 0, 0);
+
+      if (nowIST > cutoffIST) {
+        return res.status(403).json({
+          success: false,
+          msg: `Attendance cutoff has passed. Responses were due by ${org.cutoffTime}.`,
+        });
+      }
     }
 
     // ── Block if delivery is already completed ──────────────────────────────
@@ -100,6 +122,25 @@ export const markAttendanceForDay = async (req, res) => {
     const schedule = await MenuSchedule.findById(scheduleId).lean();
     if (!schedule) {
       return res.status(404).json({ success: false, msg: "Schedule not found" });
+    }
+
+     const org = await organizationModel.findById(organizationId).select("cutoffTime").lean();
+    if (org?.cutoffTime) {
+      const [cutoffHour, cutoffMin] = org.cutoffTime.split(":").map(Number);
+
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
+      const nowIST      = new Date(Date.now() + istOffsetMs);
+
+      const scheduledIST = new Date(new Date(schedule.scheduledDate).getTime() + istOffsetMs);
+      const cutoffIST    = new Date(scheduledIST);
+      cutoffIST.setUTCHours(cutoffHour, cutoffMin, 0, 0);
+
+      if (nowIST > cutoffIST) {
+        return res.status(403).json({
+          success: false,
+          msg: `Attendance cutoff has passed. Responses were due by ${org.cutoffTime}.`,
+        });
+      }
     }
 
     // ── Block if delivery is already completed ──────────────────────────────

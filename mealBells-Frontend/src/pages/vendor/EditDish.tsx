@@ -27,8 +27,9 @@ export default function EditDish() {
   const date       = params.get("date");
   const dayLabel   = params.get("day") ?? "This Day";
   const isEdit     = Boolean(scheduleId);
+  const orgId      = params.get("orgId");
 
-  const { currentSchedule, scheduleLoading, scheduleSaving, error } = useSelector(
+  const { currentSchedule, scheduleLoading, scheduleSaving, error, activeOrgId } = useSelector(
     (s: RootState) => s.vendors
   );
 
@@ -114,7 +115,12 @@ export default function EditDish() {
     if (isEdit && currentSchedule) {
       result = await dispatch(updateVendorDish({ dishId: currentSchedule.dish._id, formData: fd }));
     } else if (date) {
-      fd.append("date", date);
+      if (!activeOrgId) {
+    toast.error("No organization selected. Please select an organization first.");
+    return;
+  }
+  fd.append("date", date);
+  fd.append("orgId", activeOrgId);
       result = await dispatch(createVendorDish(fd));
     } else {
       toast.error("Missing date information."); return;

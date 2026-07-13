@@ -541,11 +541,11 @@ export default function AttendanceSummary() {
                         <td className="px-3 sm:px-6 py-3 sm:py-4 w-32 sm:w-44">
                           <ComplianceBar value={row.present} />
                         </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4">
+                        {/* <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <button className="text-orange-500 hover:text-orange-700 text-xs font-bold transition-colors cursor-pointer hover:underline underline-offset-2 whitespace-nowrap">
                             View Details
                           </button>
-                        </td>
+                        </td> */}
                       </tr>
                     ))}
                   </tbody>
