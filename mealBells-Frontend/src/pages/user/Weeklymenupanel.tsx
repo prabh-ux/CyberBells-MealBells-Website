@@ -132,7 +132,7 @@ export default function WeeklyMenuPanel() {
           className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold py-3.5 sm:py-4 rounded-2xl flex items-center justify-center gap-2 sm:gap-2.5 transition-all duration-150 text-sm sm:text-[15px] shadow-md shadow-orange-200/60"
         >
           <UtensilsCrossed className="w-4 h-4 sm:w-5 sm:h-5" />
-          Request Dish for Next Week
+          Request Dish 
         </button>
       </div>
     </div>

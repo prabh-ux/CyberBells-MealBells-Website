@@ -278,14 +278,17 @@ export default function TodayMenuPanel() {
           <div className="flex flex-col gap-3 sm:gap-4">
             <button
               onClick={() => navigate("/user/weekly-menu-panel")}
-              className="w-full bg-[#3d2314] hover:bg-[#4f2e1a] active:scale-[0.98] text-white py-4 sm:py-5 rounded-2xl font-semibold text-sm sm:text-base transition-all flex items-center justify-center gap-2 sm:gap-2.5 shadow-md"
-            >
+              className="w-full bg-[#3d2314] hover:bg-[#4f2e1a] active:scale-[0.98] text-white py-4 sm:py-5 rounded-2xl font-semibold text-sm sm:text-base transition-all flex items-center justify-center gap-2 sm:gap-2.5 shadow-md cursor-pointer"
+              >
               <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
               View Weekly Menu
             </button>
 
             {org?.allowDishRequests !== false && (
-              <button className="w-full bg-white hover:bg-gray-50 active:scale-[0.98] border border-gray-200 text-gray-700 py-4 sm:py-5 rounded-2xl font-semibold text-sm sm:text-base transition-all flex items-center justify-center gap-2 sm:gap-2.5">
+              <button 
+              onClick={() => navigate("/user/dish-request")}
+              className="w-full bg-white hover:bg-gray-50 active:scale-[0.98] border border-gray-200 text-gray-700 py-4 sm:py-5 rounded-2xl font-semibold text-sm sm:text-base transition-all flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer"
+              >
                 <UtensilsCrossed className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                 Request Tomorrow's Menu
               </button>

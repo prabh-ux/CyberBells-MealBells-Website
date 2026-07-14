@@ -35,7 +35,7 @@ import caloriesIcon     from "../../assets/calories.png";
 
 import type { DishType, FormState, PeriodKey, VendorKey } from "../../types/admin";
 
-type ErrorFields = Partial<Record<"dishName" | "vendor" | "org", string>>;
+type ErrorFields = Partial<Record<"dishName" | "vendor" | "org" | "scheduledDate", string>>;
 
 interface StatState {
   qualityScore:      string;
@@ -278,8 +278,9 @@ const SuperAdminAddEditDish = () => {
   const isFormReady = useMemo(() =>
     form.dishName.trim().length > 0 &&
     form.vendor !== "All Vendors" &&
-    selectedOrgId !== "all",
-  [form.dishName, form.vendor, selectedOrgId]);
+    selectedOrgId !== "all" &&
+    form.scheduledDate.trim().length > 0,
+  [form.dishName, form.vendor, selectedOrgId, form.scheduledDate]);
 
   const isSaveDisabled = !isFormReady || saving;
 
@@ -295,6 +296,7 @@ const SuperAdminAddEditDish = () => {
     if (!form.dishName.trim())                         errors.dishName = "Dish name is required";
     if (!form.vendor || form.vendor === "All Vendors") errors.vendor   = "Please select a vendor";
     if (!selectedOrgId || selectedOrgId === "all")     errors.org      = "Please select an organization";
+    if (!form.scheduledDate.trim())                    errors.scheduledDate = "Schedule date is required";
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -318,7 +320,7 @@ const SuperAdminAddEditDish = () => {
     payload.append("estimatedCalories", stats.estimatedCalories);
     payload.append("prepTime",          stats.prepTime);
     payload.append("orgId",             selectedOrgId);
-    if (form.scheduledDate) payload.append("scheduledDate", form.scheduledDate);
+    payload.append("scheduledDate", form.scheduledDate);
     if (form.imageFile)     payload.append("image", form.imageFile);
 
     if (isEdit && id) {
@@ -545,20 +547,22 @@ const SuperAdminAddEditDish = () => {
               </div>
 
               <div>
-                <FieldLabel>
-                  Schedule Date{" "}
-                  <span className="text-[11px] text-[var(--text-label)] font-normal">(optional)</span>
+                <FieldLabel required>
+                  Schedule Date
                 </FieldLabel>
-                <div className="flex items-center gap-3 border border-[#E0C0AF] rounded-xl px-3 sm:px-4 py-[11px] focus-within:border-[#F97316] transition-colors">
+                <div className={`flex items-center gap-3 border rounded-xl px-3 sm:px-4 py-[11px] transition-colors ${fieldBorder("scheduledDate")}`}>
                   <img src={calanderIcon} alt="" className="w-[15px] h-[15px] object-contain shrink-0" />
                   <input
                     type="date"
                     min={todayStr}
                     value={form.scheduledDate}
-                    onChange={e => set("scheduledDate", e.target.value)}
+                    onChange={e => { set("scheduledDate", e.target.value); clearFieldError("scheduledDate"); }}
                     className="flex-1 text-[14px] text-[var(--text-primary)] font-[var(--font-inter)] focus:outline-none bg-transparent"
                   />
                 </div>
+                {fieldErrors.scheduledDate && (
+                  <p className="text-xs text-red-500 font-medium mt-1">{fieldErrors.scheduledDate}</p>
+                )}
                 <p className="text-[11px] text-[var(--text-label)] mt-1">
                   Pick a date to show this dish on the user's home screen
                 </p>

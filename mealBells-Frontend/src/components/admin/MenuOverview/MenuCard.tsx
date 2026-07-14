@@ -25,7 +25,7 @@ const MenuCard = ({
           <h3 className="text-[18px] font-normal font-(--manrope) text-[var(--text-primary)] leading-snug">
             {item.name}
           </h3>
-          <div className="bg-[#FFF7ED] rounded-full p-1">
+          <div className="bg-[#FFF7ED] rounded-full p-1 hidden">
             <img src={item.icon} alt="" className="w-[9px] h-[17px] object-contain opacity-80" />
           </div>
         </div>
