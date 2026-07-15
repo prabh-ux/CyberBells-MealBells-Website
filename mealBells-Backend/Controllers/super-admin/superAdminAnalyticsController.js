@@ -321,8 +321,18 @@ export const getSuperRecentActivity = async (req, res) => {
     const activities = logs.map(l => {
       const ts = new Date(l.createdAt);
       return {
-        date:     ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        time:     ts.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+         date: ts.toLocaleDateString("en-US", {
+          timeZone: "Asia/Kolkata",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        time: ts.toLocaleTimeString("en-US", {
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }),
         name:     l.name,
         email:    l.email,
         action:   l.action,

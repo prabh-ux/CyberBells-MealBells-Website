@@ -36,6 +36,7 @@ const getDayRange = (date = new Date()) => {
 const fmtTime = (date) =>
   date
     ? new Date(date).toLocaleTimeString("en-US", {
+      timeZone: "Asia/Kolkata",
         hour: "numeric", minute: "2-digit", hour12: true,
       })
     : null;
